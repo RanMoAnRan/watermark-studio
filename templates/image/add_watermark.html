@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% set title = "图片添加水印" %}
+{% set active = "img_add" %}
+
+{% block content %}
+  <div class="hero">
+    <h2>图片添加水印</h2>
+    <p>文字水印：大小、位置、样式（平铺/单点）、旋转与透明度可调，并提供预览。</p>
+  </div>
+
+  <div class="grid">
+    <div class="card wide">
+      <div class="bd">
+        <div id="imgAddError" class="error" style="margin-bottom: 12px; {% if not error %}display:none{% endif %}">
+          <span id="imgAddErrorText">{{ error or "" }}</span>
+        </div>
+
+        <form id="imgAddForm" action="{{ url_for('image.add_submit') }}" method="post" enctype="multipart/form-data">
+          <div class="cols">
+            <div class="col-7">
+              <div class="field">
+                <label>选择图片</label>
+                <input type="file" name="file" accept="image/*" required />
+              </div>
+              <div class="field">
+                <label>水印文字</label>
+                <input type="text" name="text" placeholder="例如：© Company / Sample" value="{{ text or '' }}" required />
+              </div>
+            </div>
+            <div class="col-5">
+              <div class="field">
+                <label>样式</label>
+                <select name="style">
+                  <option value="single" {% if options and options.style == 'single' %}selected{% endif %}>单点</option>
+                  <option value="tile" {% if options and options.style == 'tile' %}selected{% endif %}>平铺</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>位置（单点模式）</label>
+                <select name="position">
+                  <option value="bottom_right" {% if options and options.position == 'bottom_right' %}selected{% endif %}>右下</option>
+                  <option value="bottom_left" {% if options and options.position == 'bottom_left' %}selected{% endif %}>左下</option>
+                  <option value="top_left" {% if options and options.position == 'top_left' %}selected{% endif %}>左上</option>
+                  <option value="top_right" {% if options and options.position == 'top_right' %}selected{% endif %}>右上</option>
+                  <option value="center" {% if options and options.position == 'center' %}selected{% endif %}>居中</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>字号</label>
+                <input type="number" name="font_size" min="8" max="240" value="{{ options.font_size if options else 36 }}" />
+              </div>
+              <div class="field">
+                <label>旋转角度</label>
+                <input type="number" name="rotation" min="-180" max="180" value="{{ options.rotation if options else 0 }}" />
+              </div>
+              <div class="field">
+                <label>颜色 / 不透明度</label>
+                <div class="row">
+                  <input type="color" name="color" value="{{ options.color_hex if options else '#111827' }}" style="width: 64px; padding: 6px 8px;" />
+                  <input type="number" name="opacity" min="0.02" max="1.0" step="0.01" value="{{ options.opacity if options else 0.35 }}" />
+                </div>
+              </div>
+              <div class="field">
+                <label>边距（单点模式）</label>
+                <input type="number" name="margin" min="0" max="200" value="{{ options.margin if options else 24 }}" />
+              </div>
+              <button class="btn primary" type="submit">添加并预览</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="imgAddResult" class="card wide" style="{% if not preview_url %}display:none{% endif %}">
+      <div class="hd">
+        <h3>预览与下载</h3>
+        <p>对比原图与加水印结果；确认无误后再下载。</p>
+      </div>
+      <div class="bd">
+        <div class="row" style="margin-bottom: 12px;">
+          <a id="imgAddDownload" class="btn primary" href="{{ download_url or '#' }}">下载处理后的图片</a>
+          <a id="imgAddOriginalDownload" class="btn secondary" href="{{ original_download_url or '#' }}">下载原图副本</a>
+          <a class="btn secondary" href="{{ url_for('image.add_page') }}">处理另一张图片</a>
+          <span class="muted">想改参数？直接修改后再次点击“添加并预览”，无需重新选文件。</span>
+        </div>
+        <div class="preview">
+          <div class="bar">
+            <div class="title">原图 vs 加水印结果</div>
+            <div id="imgAddOriginalName" class="muted">{{ original_name or "" }}</div>
+          </div>
+          <div class="body">
+            <div class="cols" style="gap: 12px; padding: 12px;">
+              <div class="col-6">
+                <div class="muted" style="margin-bottom: 8px;">原图</div>
+                <img id="imgAddBeforePreview" src="{{ original_preview_url or '' }}" alt="before" />
+              </div>
+              <div class="col-6">
+                <div class="muted" style="margin-bottom: 8px;">加水印后</div>
+                <img id="imgAddAfterPreview" src="{{ preview_url or '' }}" alt="after" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/forms_ajax.js') }}"></script>
+  <script>
+    submitAjaxForm({
+      form: "#imgAddForm",
+      errorBox: "#imgAddError",
+      errorText: "#imgAddErrorText",
+      submitBtn: "button[type='submit']",
+      submittingText: "处理中…",
+      onSuccess: (data) => {
+        document.querySelector("#imgAddResult").style.display = "";
+        document.querySelector("#imgAddBeforePreview").src = data.original_preview_url;
+        document.querySelector("#imgAddAfterPreview").src = data.preview_url;
+        document.querySelector("#imgAddDownload").href = data.download_url;
+        document.querySelector("#imgAddOriginalDownload").href = data.original_download_url;
+        document.querySelector("#imgAddOriginalName").textContent = data.original_name || "";
+      },
+    });
+  </script>
+{% endblock %}

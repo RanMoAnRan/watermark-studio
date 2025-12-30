@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% set title = "PDF 去水印" %}
+{% set active = "pdf_remove" %}
+
+{% block content %}
+  <div class="hero">
+    <h2>PDF 去水印</h2>
+    <p>上传 PDF → 自动尝试移除“Watermark 标记内容 / 常见注释水印 / 低透明度块（可选）” → 在线预览 → 下载结果。</p>
+  </div>
+
+  <div class="grid">
+    <div class="card wide">
+      <div class="bd">
+        <div id="pdfRemoveError" class="error" style="margin-bottom: 12px; {% if not error %}display:none{% endif %}">
+          <span id="pdfRemoveErrorText">{{ error or "" }}</span>
+        </div>
+
+        <form id="pdfRemoveForm" action="{{ url_for('pdf.remove_submit') }}" method="post" enctype="multipart/form-data">
+          <div class="cols">
+            <div class="col-7">
+              <div class="field">
+                <label>选择 PDF 文件</label>
+                <input type="file" name="file" accept="application/pdf" required />
+                <div class="hint">建议：水印是 Stamp/Watermark 注释或 Artifact 标记时效果最好。</div>
+              </div>
+            </div>
+            <div class="col-5">
+              <div class="field">
+                <label>选项</label>
+                <div class="row">
+                  <label style="margin: 0; display: inline-flex; gap: 8px; align-items: center;">
+                    <input type="checkbox" name="enhanced" {% if enhanced is not defined or enhanced %}checked{% endif %} />
+                    增强去水印（可能误删少量内容）
+                  </label>
+                  <label style="margin: 0; display: inline-flex; gap: 8px; align-items: center;">
+                    <input type="checkbox" name="remove_images" {% if remove_images %}checked{% endif %} />
+                    尝试去除图片水印（可能误删图片）
+                  </label>
+                </div>
+                <div class="hint">增强模式会尝试清理低透明度/大字号旋转的可疑块。</div>
+                <div class="hint">图片水印通常是 XObject 图片叠加：该选项只在“可疑透明度/旋转大图”的场景下尝试移除。</div>
+              </div>
+              <button class="btn primary" type="submit">处理并预览</button>
+            </div>
+          </div>
+        </form>
+
+        <div id="pdfRemoveStats" class="ok" style="margin-top: 12px; {% if not stats %}display:none{% endif %}">
+          <div>处理完成：<span id="pdfRemoveOriginalName">{{ original_name or "" }}</span></div>
+          <div class="muted" style="margin-top: 6px;">
+            注释水印：<span id="statAnnots">{{ stats.removed_watermark_annots if stats else "" }}</span>
+            · 标记内容：<span id="statArtifacts">{{ stats.removed_watermark_artifacts if stats else "" }}</span>
+            · 低透明度块：<span id="statLowOpacity">{{ stats.removed_low_opacity_blocks if stats else "" }}</span>
+            · 可疑图片水印：<span id="statImgXobj">{{ stats.removed_suspected_image_xobjects if stats else "" }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="pdfRemoveResult" class="card wide" style="{% if not preview_url %}display:none{% endif %}">
+      <div class="hd">
+        <h3>预览与下载</h3>
+        <p>对比原文件与去水印结果；确认无误后下载。</p>
+      </div>
+      <div class="bd">
+        <div class="row" style="margin-bottom: 12px;">
+          <a id="pdfRemoveDownload" class="btn primary" href="{{ download_url or '#' }}">下载处理后的 PDF</a>
+          <a id="pdfRemoveOriginalDownload" class="btn secondary" href="{{ original_download_url or '#' }}">下载原文件副本</a>
+          <a class="btn secondary" href="{{ url_for('pdf.remove_page') }}">处理另一个文件</a>
+          <span class="muted">想改参数？直接修改后再次点击“处理并预览”，无需重新选文件。</span>
+        </div>
+
+        <div id="pdfTextCompare" class="muted" style="margin-bottom: 10px; {% if not text_compare %}display:none{% endif %}">
+          文本对比（抽样前 <span id="tcPages">{{ text_compare.pages_sampled if text_compare else "" }}</span> 页）：
+          相似度 <span id="tcSim">{{ ((text_compare.similarity * 100) | round(2)) if text_compare and text_compare.similarity is not none else "N/A" }}</span>% ·
+          提取文本长度 <span id="tcLenB">{{ text_compare.before_len if text_compare else "" }}</span> → <span id="tcLenA">{{ text_compare.after_len if text_compare else "" }}</span>
+        </div>
+
+        <div class="preview">
+          <div class="bar">
+            <div class="title">原文件 vs 去水印结果</div>
+            <div class="muted">如预览空白，请直接下载查看</div>
+          </div>
+          <div class="body">
+            <div class="cols" style="gap: 12px; padding: 12px;">
+              <div class="col-6">
+                <div class="muted" style="margin-bottom: 8px;">原文件</div>
+                <iframe id="pdfRemoveBeforeIframe" src="{{ original_preview_url or '' }}" style="height: 520px;"></iframe>
+              </div>
+              <div class="col-6">
+                <div class="muted" style="margin-bottom: 8px;">去水印后</div>
+                <iframe id="pdfRemoveAfterIframe" src="{{ preview_url or '' }}" style="height: 520px;"></iframe>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/forms_ajax.js') }}"></script>
+  <script>
+    submitAjaxForm({
+      form: "#pdfRemoveForm",
+      errorBox: "#pdfRemoveError",
+      errorText: "#pdfRemoveErrorText",
+      submitBtn: "button[type='submit']",
+      submittingText: "处理中…",
+      onSuccess: (data) => {
+        document.querySelector("#pdfRemoveResult").style.display = "";
+        document.querySelector("#pdfRemoveStats").style.display = "";
+        document.querySelector("#pdfRemoveBeforeIframe").src = data.original_preview_url;
+        document.querySelector("#pdfRemoveAfterIframe").src = data.preview_url;
+        document.querySelector("#pdfRemoveDownload").href = data.download_url;
+        document.querySelector("#pdfRemoveOriginalDownload").href = data.original_download_url;
+        document.querySelector("#pdfRemoveOriginalName").textContent = data.original_name || "";
+        document.querySelector("#statAnnots").textContent = (data.stats && data.stats.removed_watermark_annots) ?? "";
+        document.querySelector("#statArtifacts").textContent = (data.stats && data.stats.removed_watermark_artifacts) ?? "";
+        document.querySelector("#statLowOpacity").textContent = (data.stats && data.stats.removed_low_opacity_blocks) ?? "";
+        document.querySelector("#statImgXobj").textContent = (data.stats && data.stats.removed_suspected_image_xobjects) ?? "";
+
+        const tc = data.stats && data.stats.text_compare;
+        if (tc) {
+          document.querySelector("#pdfTextCompare").style.display = "";
+          document.querySelector("#tcPages").textContent = tc.pages_sampled ?? "";
+          const sim = (tc.similarity === null || tc.similarity === undefined) ? "N/A" : (tc.similarity * 100).toFixed(2);
+          document.querySelector("#tcSim").textContent = sim;
+          document.querySelector("#tcLenB").textContent = tc.before_len ?? "";
+          document.querySelector("#tcLenA").textContent = tc.after_len ?? "";
+        }
+      },
+    });
+  </script>
+{% endblock %}

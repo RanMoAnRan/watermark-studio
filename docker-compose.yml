@@ -1,0 +1,17 @@
+services:
+  watermark-studio:
+    build:
+      context: .
+      args:
+        APT_MIRROR_URL: https://mirrors.tuna.tsinghua.edu.cn
+        PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
+        PIP_TRUSTED_HOST: pypi.tuna.tsinghua.edu.cn
+    ports:
+      - "${HOST_PORT:-5001}:5000"
+    volumes:
+      - ./instance:/app/instance
+    environment:
+      # Optional: point to a specific font file inside container to improve watermark text rendering
+      # - WATERMARK_FONT_PATH=/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped

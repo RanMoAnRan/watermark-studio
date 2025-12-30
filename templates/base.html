@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% if title %}{{ title }} · {% endif %}{{ app_name or "Watermark Studio" }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="topbar">
+        <a class="brand" href="{{ url_for('main.index') }}">
+          <div class="logo" aria-hidden="true"></div>
+          <div>
+            <h1>{{ app_name or "Watermark Studio" }}</h1>
+            <div class="sub">PDF / 图片水印：添加、去除、预览、下载</div>
+          </div>
+        </a>
+        <nav class="nav">
+          <a href="{{ url_for('pdf.remove_page') }}" class="{% if active == 'pdf_remove' %}active{% endif %}">PDF 去水印</a>
+          <a href="{{ url_for('pdf.add_page') }}" class="{% if active == 'pdf_add' %}active{% endif %}">PDF 加水印</a>
+          <a href="{{ url_for('image.add_page') }}" class="{% if active == 'img_add' %}active{% endif %}">图片加水印</a>
+          <a href="{{ url_for('image.remove_page') }}" class="{% if active == 'img_remove' %}active{% endif %}">图片去水印</a>
+        </nav>
+      </div>
+
+      {% block content %}{% endblock %}
+
+      <div class="footer">
+        <span class="pill">本工具仅在本地处理文件</span>
+        <span class="pill">默认上限 50MB</span>
+      </div>
+    </div>
+  </body>
+</html>

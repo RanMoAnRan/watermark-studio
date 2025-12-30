@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% set title = "图片去水印" %}
+{% set active = "img_remove" %}
+
+{% block content %}
+  <div class="hero">
+    <h2>图片去水印</h2>
+    <p>可在预览画布上框选水印区域（推荐）；若不选，将自动尝试检测并修复水印区域。处理后可预览再下载。</p>
+  </div>
+
+  <div class="grid">
+    <div class="card wide">
+      <div class="bd">
+        <div id="imgRemoveError" class="error" style="margin-bottom: 12px; {% if not error %}display:none{% endif %}">
+          <span id="imgRemoveErrorText">{{ error or "" }}</span>
+        </div>
+
+        <form id="imgRemoveForm" action="{{ url_for('image.remove_submit') }}" method="post" enctype="multipart/form-data">
+          <div class="cols">
+            <div class="col-7">
+              <div class="field">
+                <label>选择图片（在下方画布上拖拽框选水印区域）</label>
+                <input id="imgFile" type="file" name="file" accept="image/*" required />
+                <div class="hint" id="regionHint">未选择区域：将尝试自动去水印。</div>
+              </div>
+
+              <div class="preview" style="margin-top: 10px;">
+                <div class="bar">
+                  <div class="title">区域选择</div>
+                  <div class="row">
+                    <a class="btn secondary" href="#" id="undoRegion">撤销上一个</a>
+                    <a class="btn secondary" href="#" id="clearRegion">清除选择</a>
+                  </div>
+                </div>
+                <div class="body">
+                  <canvas id="regionCanvas" height="420"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-5">
+              <div class="field">
+                <label>自动去水印强度（不选区域时生效）</label>
+                <input type="number" name="auto_strength" min="10" max="120" value="{{ options.auto_strength if options else 40 }}" />
+                <div class="hint">数值越大：自动检测范围越广，可能误伤细节。</div>
+              </div>
+
+              <div class="field">
+                <label>修复方式</label>
+                <select name="method">
+                  <option value="telea" {% if not options or options.method != 'ns' %}selected{% endif %}>TELEA（推荐）</option>
+                  <option value="ns" {% if options and options.method == 'ns' %}selected{% endif %}>Navier-Stokes（更平滑）</option>
+                </select>
+                <div class="hint">不同图片效果不同，可切换对比。</div>
+              </div>
+
+              <div class="field">
+                <label>修复半径</label>
+                <input type="number" name="inpaint_radius" min="1" max="12" value="{{ options.inpaint_radius if options else 3 }}" />
+                <div class="hint">越大越容易“糊”，建议从 2~4 试。</div>
+              </div>
+
+              <div class="field">
+                <label>遮罩扩展</label>
+                <input type="number" name="mask_expand" min="0" max="20" value="{{ options.mask_expand if options else 2 }}" />
+                <div class="hint">用于覆盖水印边缘；越大越可能误伤细节。</div>
+              </div>
+
+              <input type="hidden" name="x" id="xInput" />
+              <input type="hidden" name="y" id="yInput" />
+              <input type="hidden" name="w" id="wInput" />
+              <input type="hidden" name="h" id="hInput" />
+              <input type="hidden" name="regions" id="regionsInput" />
+
+              <button class="btn primary" type="submit">去水印并预览</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="imgRemoveResult" class="card wide" style="{% if not preview_url %}display:none{% endif %}">
+      <div class="hd">
+        <h3>预览与下载</h3>
+        <p>确认预览效果后再下载。</p>
+      </div>
+      <div class="bd">
+        <div class="row" style="margin-bottom: 12px;">
+          <a id="imgRemoveDownload" class="btn primary" href="{{ download_url or '#' }}">下载去水印后的图片</a>
+          <a class="btn secondary" href="{{ url_for('image.remove_page') }}">处理另一张图片</a>
+          <span class="muted">想改参数？直接修改后再次点击“去水印并预览”，无需重新选文件。</span>
+        </div>
+        <div class="preview">
+          <div class="bar">
+            <div class="title">结果预览</div>
+            <div id="imgRemoveOriginalName" class="muted">{{ original_name or "" }}</div>
+          </div>
+          <div class="body">
+            <img id="imgRemovePreview" src="{{ preview_url or '' }}" alt="preview" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/forms_ajax.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/image_region_select.js') }}"></script>
+  <script>
+    setupRegionSelector({
+      fileInput: "#imgFile",
+      canvas: "#regionCanvas",
+      hint: "#regionHint",
+      xInput: "#xInput",
+      yInput: "#yInput",
+      wInput: "#wInput",
+      hInput: "#hInput",
+      regionsInput: "#regionsInput",
+      clearBtn: "#clearRegion",
+      undoBtn: "#undoRegion",
+    });
+
+    submitAjaxForm({
+      form: "#imgRemoveForm",
+      errorBox: "#imgRemoveError",
+      errorText: "#imgRemoveErrorText",
+      submitBtn: "button[type='submit']",
+      submittingText: "处理中…",
+      onSuccess: (data) => {
+        document.querySelector("#imgRemoveResult").style.display = "";
+        document.querySelector("#imgRemovePreview").src = data.preview_url;
+        document.querySelector("#imgRemoveDownload").href = data.download_url;
+        document.querySelector("#imgRemoveOriginalName").textContent = data.original_name || "";
+      },
+    });
+  </script>
+{% endblock %}

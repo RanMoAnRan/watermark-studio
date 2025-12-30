@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="hero">
+    <h2>{{ title or "出错了" }}</h2>
+    <p>{{ message or "请返回重试。" }}</p>
+  </div>
+{% endblock %}
+

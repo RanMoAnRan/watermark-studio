@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% set title = "PDF 添加水印" %}
+{% set active = "pdf_add" %}
+
+{% block content %}
+  <div class="hero">
+    <h2>PDF 添加水印</h2>
+    <p>支持单点/平铺文字水印：大小、位置、颜色、不透明度、旋转角度可调，并提供在线预览。</p>
+  </div>
+
+  <div class="grid">
+    <div class="card wide">
+      <div class="bd">
+        <div id="pdfAddError" class="error" style="margin-bottom: 12px; {% if not error %}display:none{% endif %}">
+          <span id="pdfAddErrorText">{{ error or "" }}</span>
+        </div>
+
+        <form id="pdfAddForm" action="{{ url_for('pdf.add_submit') }}" method="post" enctype="multipart/form-data">
+          <div class="cols">
+            <div class="col-7">
+              <div class="field">
+                <label>选择 PDF 文件</label>
+                <input type="file" name="file" accept="application/pdf" required />
+              </div>
+
+              <div class="field">
+                <label>水印类型</label>
+                <div class="row">
+                  <label style="margin:0; display:inline-flex; gap:8px; align-items:center;">
+                    <input type="radio" name="mode" value="text" {% if mode is not defined or mode == 'text' %}checked{% endif %} />
+                    文字水印
+                  </label>
+                  <label style="margin:0; display:inline-flex; gap:8px; align-items:center;">
+                    <input type="radio" name="mode" value="image" {% if mode == 'image' %}checked{% endif %} />
+                    图片水印
+                  </label>
+                </div>
+                <div class="hint">切换类型后可直接改参数再次预览，已选 PDF 不会被清空。</div>
+              </div>
+
+              <div id="textMode">
+                <div class="field">
+                  <label>水印文字</label>
+                  <input id="wmText" type="text" name="text" placeholder="例如：Confidential / 仅供内部使用" value="{{ text or '' }}" />
+                </div>
+              </div>
+
+              <div id="imageMode" style="display:none">
+                <div class="field">
+                  <label>水印图片</label>
+                  <input id="wmImage" type="file" name="watermark_image" accept="image/*" />
+                  <div class="hint">支持 PNG/JPG/WEBP（会自动转为 PNG）。</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-5">
+              <div id="textOptions">
+                <div class="field">
+                  <label>样式</label>
+                  <select name="style">
+                    <option value="tile" {% if options and options.style == 'tile' %}selected{% endif %}>平铺</option>
+                    <option value="single" {% if options and options.style == 'single' %}selected{% endif %}>单点</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>位置（单点模式）</label>
+                  <select name="position">
+                    <option value="center" {% if options and options.position == 'center' %}selected{% endif %}>居中</option>
+                    <option value="top_left" {% if options and options.position == 'top_left' %}selected{% endif %}>左上</option>
+                    <option value="top_right" {% if options and options.position == 'top_right' %}selected{% endif %}>右上</option>
+                    <option value="bottom_left" {% if options and options.position == 'bottom_left' %}selected{% endif %}>左下</option>
+                    <option value="bottom_right" {% if options and options.position == 'bottom_right' %}selected{% endif %}>右下</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>字号</label>
+                  <input type="number" name="font_size" min="8" max="200" value="{{ options.font_size if options else 48 }}" />
+                </div>
+                <div class="field">
+                  <label>旋转角度</label>
+                  <input type="number" name="rotation" min="-180" max="180" value="{{ options.rotation if options else 30 }}" />
+                </div>
+                <div class="field">
+                  <label>颜色 / 不透明度</label>
+                  <div class="row">
+                    <input type="color" name="color" value="{{ options.color_hex if options else '#111827' }}" style="width: 64px; padding: 6px 8px;" />
+                    <input type="number" name="opacity" min="0.02" max="1.0" step="0.01" value="{{ options.opacity if options else 0.18 }}" />
+                  </div>
+                  <div class="hint">不透明度越小越“隐形”。</div>
+                </div>
+                <div class="field">
+                  <label>边距（单点模式）</label>
+                  <input type="number" name="margin" min="0" max="200" value="{{ options.margin if options else 36 }}" />
+                </div>
+              </div>
+
+              <div id="imageOptions" style="display:none">
+                <div class="field">
+                  <label>样式</label>
+                  <select name="img_style">
+                    <option value="single" {% if img_options and img_options.style == 'single' %}selected{% endif %}>单点</option>
+                    <option value="tile" {% if img_options and img_options.style == 'tile' %}selected{% endif %}>平铺</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>位置（单点模式）</label>
+                  <select name="img_position">
+                    <option value="center" {% if img_options and img_options.position == 'center' %}selected{% endif %}>居中</option>
+                    <option value="top_left" {% if img_options and img_options.position == 'top_left' %}selected{% endif %}>左上</option>
+                    <option value="top_right" {% if img_options and img_options.position == 'top_right' %}selected{% endif %}>右上</option>
+                    <option value="bottom_left" {% if img_options and img_options.position == 'bottom_left' %}selected{% endif %}>左下</option>
+                    <option value="bottom_right" {% if img_options and img_options.position == 'bottom_right' %}selected{% endif %}>右下</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>大小（相对页面宽度 %）</label>
+                  <input type="number" name="img_width_percent" min="5" max="90" value="{{ img_options.width_percent if img_options else 25 }}" />
+                </div>
+                <div class="field">
+                  <label>旋转角度</label>
+                  <input type="number" name="img_rotation" min="-180" max="180" value="{{ img_options.rotation if img_options else 0 }}" />
+                </div>
+                <div class="field">
+                  <label>不透明度</label>
+                  <input type="number" name="img_opacity" min="0.02" max="1.0" step="0.01" value="{{ img_options.opacity if img_options else 0.35 }}" />
+                </div>
+                <div class="field">
+                  <label>间距（平铺/边距）</label>
+                  <input type="number" name="img_margin" min="0" max="200" value="{{ img_options.margin if img_options else 36 }}" />
+                </div>
+              </div>
+
+              <button class="btn primary" type="submit">添加并预览</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="pdfAddResult" class="card wide" style="{% if not preview_url %}display:none{% endif %}">
+      <div class="hd">
+        <h3>预览与下载</h3>
+        <p>在线预览添加水印后的 PDF；确认无误后下载。</p>
+      </div>
+      <div class="bd">
+        <div class="row" style="margin-bottom: 12px;">
+          <a id="pdfAddDownload" class="btn primary" href="{{ download_url or '#' }}">下载加水印后的 PDF</a>
+          <a class="btn secondary" href="{{ url_for('pdf.add_page') }}">处理另一个文件</a>
+          <span class="muted">想改参数？直接修改后再次点击“添加并预览”，无需重新选文件。</span>
+        </div>
+        <div class="preview">
+          <div class="bar">
+            <div class="title">PDF 预览</div>
+            <div id="pdfAddOriginalName" class="muted">{{ original_name or "" }}</div>
+          </div>
+          <div class="body">
+            <iframe id="pdfAddIframe" src="{{ preview_url or '' }}"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/forms_ajax.js') }}"></script>
+  <script>
+    function showPdfAddError(msg) {
+      const box = document.querySelector("#pdfAddError");
+      const text = document.querySelector("#pdfAddErrorText");
+      if (text) text.textContent = msg || "";
+      if (box) box.style.display = "";
+    }
+
+    function setPdfWatermarkMode(mode) {
+      const isText = mode === "text";
+      const textMode = document.querySelector("#textMode");
+      const textOptions = document.querySelector("#textOptions");
+      const imageMode = document.querySelector("#imageMode");
+      const imageOptions = document.querySelector("#imageOptions");
+      if (textMode) textMode.style.display = isText ? "" : "none";
+      if (textOptions) textOptions.style.display = isText ? "" : "none";
+      if (imageMode) imageMode.style.display = isText ? "none" : "";
+      if (imageOptions) imageOptions.style.display = isText ? "none" : "";
+
+      const textInput = document.querySelector("#wmText");
+      const imgInput = document.querySelector("#wmImage");
+      if (textInput) textInput.required = isText;
+      if (imgInput) imgInput.required = !isText;
+
+      const setDisabledWithin = (root, disabled) => {
+        if (!root) return;
+        root.querySelectorAll("input, select, textarea").forEach((el) => {
+          el.disabled = !!disabled;
+        });
+      };
+      setDisabledWithin(textMode, !isText);
+      setDisabledWithin(textOptions, !isText);
+      setDisabledWithin(imageMode, isText);
+      setDisabledWithin(imageOptions, isText);
+    }
+
+    document.querySelectorAll("input[name='mode']").forEach((el) => {
+      el.addEventListener("change", () => setPdfWatermarkMode(el.value));
+    });
+    setPdfWatermarkMode((document.querySelector("input[name='mode']:checked") || {}).value || "text");
+
+    document.querySelector("#pdfAddForm button[type='submit']")?.addEventListener("click", () => {
+      const form = document.querySelector("#pdfAddForm");
+      if (!form) return;
+      const file = form.querySelector("input[name='file']");
+      const mode = (document.querySelector("input[name='mode']:checked") || {}).value || "text";
+      const wmText = document.querySelector("#wmText");
+      const wmImage = document.querySelector("#wmImage");
+
+      const hasPdf = !!(file && file.files && file.files.length > 0);
+      if (!hasPdf) {
+        showPdfAddError("请选择一个 PDF 文件。");
+        return;
+      }
+
+      if (mode === "text") {
+        const val = (wmText && wmText.value) ? wmText.value.trim() : "";
+        if (!val) {
+          showPdfAddError("请输入水印文字。");
+          return;
+        }
+      } else {
+        const hasImg = !!(wmImage && wmImage.files && wmImage.files.length > 0);
+        if (!hasImg) {
+          showPdfAddError("请选择一张水印图片。");
+          return;
+        }
+      }
+    });
+
+    submitAjaxForm({
+      form: "#pdfAddForm",
+      errorBox: "#pdfAddError",
+      errorText: "#pdfAddErrorText",
+      submitBtn: "button[type='submit']",
+      submittingText: "处理中…",
+      onSuccess: (data) => {
+        document.querySelector("#pdfAddResult").style.display = "";
+        document.querySelector("#pdfAddIframe").src = data.preview_url;
+        document.querySelector("#pdfAddDownload").href = data.download_url;
+        document.querySelector("#pdfAddOriginalName").textContent = data.original_name || "";
+      },
+    });
+  </script>
+{% endblock %}

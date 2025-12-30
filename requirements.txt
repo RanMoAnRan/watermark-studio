@@ -1,0 +1,7 @@
+Flask>=2.3
+pypdf>=4.0
+reportlab>=4.0
+Pillow>=10.0
+numpy>=1.23
+opencv-python-headless>=4.8
+gunicorn>=21.2
