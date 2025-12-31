@@ -32,7 +32,7 @@
                     <a class="btn secondary" href="#" id="clearRegion">清除选择</a>
                   </div>
                 </div>
-                <div class="body">
+                <div class="body" id="regionPreview" style="display:none;">
                   <canvas id="regionCanvas" height="420"></canvas>
                 </div>
               </div>
@@ -109,6 +109,7 @@
     setupRegionSelector({
       fileInput: "#imgFile",
       canvas: "#regionCanvas",
+      previewBox: "#regionPreview",
       hint: "#regionHint",
       xInput: "#xInput",
       yInput: "#yInput",

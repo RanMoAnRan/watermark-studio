@@ -3,9 +3,11 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, render_template, request
 
 from watermark_studio.services.image_tools import (
+    ImageCompressOptions,
     ImageRemoveWatermarkOptions,
     ImageTextWatermarkOptions,
     image_add_text_watermark,
+    image_compress,
     image_remove_watermark,
 )
 from watermark_studio.services.storage import save_output_bytes
@@ -124,4 +126,59 @@ def remove_submit():
         download_url=f"/files/{job_id}?download=1",
         original_name=uploaded.filename,
         options=options,
+    )
+
+
+@image_bp.get("/compress")
+def compress_page():
+    return render_template("image/compress.html")
+
+
+@image_bp.post("/compress")
+def compress_submit():
+    try:
+        uploaded = ensure_image_upload(request.files.get("file"))
+        options = ImageCompressOptions.from_form(request.form)
+        output_bytes, mimetype, suffix, stats = image_compress(uploaded.bytes, options=options)
+    except Exception as exc:
+        if _wants_json():
+            return jsonify(ok=False, error=f"处理失败：{exc}"), 400
+        return render_template(
+            "image/compress.html",
+            error=f"处理失败：{exc}",
+            options=ImageCompressOptions.from_form(request.form),
+        ), 400
+
+    original_mimetype, original_suffix = _guess_image_mimetype(uploaded.filename)
+    original_name = uploaded.stem + f"_original{original_suffix}"
+    original_job_id = save_output_bytes(uploaded.bytes, download_name=original_name, mimetype=original_mimetype)
+
+    download_name = uploaded.stem + f"_compressed{suffix}"
+    job_id = save_output_bytes(output_bytes, download_name=download_name, mimetype=mimetype)
+
+    payload = {
+        "ok": True,
+        "original_job_id": original_job_id,
+        "job_id": job_id,
+        "original_preview_url": f"/files/{original_job_id}",
+        "original_download_url": f"/files/{original_job_id}?download=1",
+        "preview_url": f"/files/{job_id}",
+        "download_url": f"/files/{job_id}?download=1",
+        "original_name": uploaded.filename,
+        "stats": stats,
+    }
+    if _wants_json():
+        return jsonify(payload)
+
+    return render_template(
+        "image/compress.html",
+        original_job_id=original_job_id,
+        job_id=job_id,
+        original_preview_url=f"/files/{original_job_id}",
+        preview_url=f"/files/{job_id}",
+        original_download_url=f"/files/{original_job_id}?download=1",
+        download_url=f"/files/{job_id}?download=1",
+        original_name=uploaded.filename,
+        options=options,
+        stats=stats,
     )

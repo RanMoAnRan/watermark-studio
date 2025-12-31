@@ -7,6 +7,7 @@ function clamp01(v) {
 function setupRegionSelector(cfg) {
   const fileInput = document.querySelector(cfg.fileInput);
   const canvas = document.querySelector(cfg.canvas);
+  const previewBox = cfg.previewBox ? document.querySelector(cfg.previewBox) : null;
   const hint = document.querySelector(cfg.hint);
 
   const xInput = document.querySelector(cfg.xInput);
@@ -24,6 +25,16 @@ function setupRegionSelector(cfg) {
   let startY = 0;
   let activeRect = null;
   let regions = [];
+
+  function showPreview() {
+    if (!previewBox) return;
+    previewBox.style.display = "";
+  }
+
+  function hidePreview() {
+    if (!previewBox) return;
+    previewBox.style.display = "none";
+  }
 
   function clearRectInputs() {
     xInput.value = "";
@@ -97,7 +108,12 @@ function setupRegionSelector(cfg) {
     activeRect = null;
     regions = [];
     clearRectInputs();
-    if (!file) return;
+    if (!file) {
+      img.removeAttribute("src");
+      hidePreview();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
 
     const url = URL.createObjectURL(file);
     img.onload = () => {
@@ -105,6 +121,7 @@ function setupRegionSelector(cfg) {
       const scale = img.width > maxW ? (maxW / img.width) : 1;
       canvas.width = Math.floor(img.width * scale);
       canvas.height = Math.floor(img.height * scale);
+      showPreview();
       draw();
       updateNormalizedInputs();
     };

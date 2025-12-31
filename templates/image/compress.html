@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% set title = "图片压缩" %}
+{% set active = "img_compress" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/cropperjs/cropper.min.css') }}" />
+{% endblock %}
+
+{% block content %}
+  <div class="hero">
+    <h2>图片压缩</h2>
+    <p>支持常用比例裁剪/自定义输出像素，并按“目标大小（默认不超过）”输出尽量清晰的结果。处理后可预览再下载。</p>
+  </div>
+
+  <div class="grid">
+    <div class="card wide">
+      <div class="bd">
+        <div id="imgCompressError" class="error" style="margin-bottom: 12px; {% if not error %}display:none{% endif %}">
+          <span id="imgCompressErrorText">{{ error or "" }}</span>
+        </div>
+
+        <form id="imgCompressForm" action="{{ url_for('image.compress_submit') }}" method="post" enctype="multipart/form-data">
+          <div class="cols">
+            <div class="col-7">
+              <div class="field">
+                <label>选择图片</label>
+                <input id="imgCompressFile" type="file" name="file" accept="image/*" required />
+                <div class="hint" id="imgCompressHint">选择后可在下方预览中拖拽裁剪框；支持锁定比例与输出像素。</div>
+              </div>
+
+              <div class="preview" style="margin-top: 10px;">
+                <div class="bar">
+                  <div>
+                    <div class="title">裁剪预览</div>
+                    <div id="imgCompressOrigSize" class="muted" style="font-size: 12px;"></div>
+                  </div>
+                  <div class="row">
+                    <input id="imgCompressCropPW" type="number" min="1" step="1" placeholder="裁剪宽(px)" style="width: 140px; padding: 8px 10px; border-radius: 12px;" />
+                    <input id="imgCompressCropPH" type="number" min="1" step="1" placeholder="裁剪高(px)" style="width: 140px; padding: 8px 10px; border-radius: 12px;" />
+                    <a class="btn secondary" href="#" id="imgCompressReset">重置</a>
+                    <a class="btn secondary" href="#" id="imgCompressCenter">居中裁剪</a>
+                  </div>
+                </div>
+                <div class="body" style="padding: 12px;">
+                  <div style="max-height: 520px; overflow: hidden;">
+                    <img id="imgCompressCropImage" alt="crop" style="max-width: 100%; display: block;" />
+                  </div>
+                  <div class="hint" id="imgCompressCropInfo" style="margin-top: 10px;">未选择图片。</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-5">
+              <div class="field">
+                <label>比例</label>
+                <select id="imgCompressRatio" name="ratio">
+                  <option value="original" selected>原比例</option>
+                  <option value="free">自由</option>
+                  <option value="id_1inch">证件照：1 寸（25×35mm）</option>
+                  <option value="id_2inch">证件照：2 寸（35×49mm）</option>
+                  <option value="print_4r">冲印：4 寸（4×6in）</option>
+                  <option value="print_5r">冲印：5 寸（5×7in）</option>
+                  <option value="print_6r">冲印：6 寸（6×8in）</option>
+                  <option value="1:1">1:1</option>
+                  <option value="4:3">4:3</option>
+                  <option value="3:4">3:4</option>
+                  <option value="16:9">16:9</option>
+                  <option value="9:16">9:16</option>
+                  <option value="3:2">3:2</option>
+                  <option value="2:3">2:3</option>
+                  <option value="a4">A4（1:1.414）</option>
+                </select>
+                <div class="hint">锁定比例会限制裁剪框形状，但不限制大小。</div>
+              </div>
+
+              <div class="field">
+                <label>输出像素（可选）</label>
+                <div class="row">
+                  <div style="flex:1; min-width: 140px;">
+                    <input type="number" name="out_w_px" id="imgCompressOutW" min="1" max="20000" placeholder="宽（px）" value="{{ options.out_w_px if options else '' }}" />
+                  </div>
+                  <div style="flex:1; min-width: 140px;">
+                    <input type="number" name="out_h_px" id="imgCompressOutH" min="1" max="20000" placeholder="高（px）" value="{{ options.out_h_px if options else '' }}" />
+                  </div>
+                </div>
+                <div class="hint" id="imgCompressOutHint">留空：按裁剪区域原分辨率输出（更清晰，但可能更大）。</div>
+              </div>
+
+              <div class="field">
+                <label>目标大小（默认不超过）</label>
+                <div class="row">
+                  <div style="flex:1; min-width: 160px;">
+                    <input type="number" name="target_size" min="1" max="1000000" value="{{ (options.target_bytes // 1024) if options and options.target_bytes else 500 }}" />
+                  </div>
+                  <div style="width: 110px;">
+                    <select name="target_unit">
+                      <option value="kb" selected>KB</option>
+                      <option value="mb">MB</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="hint">会在满足目标大小的前提下尽量提高画质；若目标过小会提示调整建议。</div>
+              </div>
+
+              <div class="field">
+                <label>输出格式</label>
+                <select name="format" id="imgCompressFormat">
+                  <option value="auto" selected>自动（推荐）</option>
+                  <option value="jpeg">JPEG</option>
+                  <option value="webp">WebP</option>
+                  <option value="png">PNG</option>
+                </select>
+                <div class="hint">一般建议：照片选 JPEG/WebP；含透明背景选 WebP/PNG。</div>
+              </div>
+
+              <div class="field">
+                <label>透明与背景</label>
+                <div class="row">
+                  <label style="display:flex; gap:8px; align-items:center; margin:0;">
+                    <input type="checkbox" name="preserve_alpha" id="imgCompressPreserveAlpha" value="1" checked />
+                    保留透明（如有）
+                  </label>
+                  <div style="width: 140px;">
+                    <input type="color" name="background" id="imgCompressBg" value="{{ options.background_hex if options else '#ffffff' }}" />
+                  </div>
+                </div>
+                <div class="hint" id="imgCompressAlphaHint">选择 JPEG 时将自动填充背景色（不支持透明）。</div>
+              </div>
+
+              <details class="field">
+                <summary class="muted" style="cursor:pointer;">高级选项</summary>
+                <div style="margin-top: 10px;">
+                  <div class="field">
+                    <label>质量范围（JPEG/WebP）</label>
+                    <div class="row">
+                      <div style="flex:1; min-width: 140px;">
+                        <input type="number" name="min_quality" min="10" max="90" value="{{ options.min_quality if options else 30 }}" />
+                      </div>
+                      <div style="flex:1; min-width: 140px;">
+                        <input type="number" name="max_quality" min="20" max="100" value="{{ options.max_quality if options else 95 }}" />
+                      </div>
+                    </div>
+                    <div class="hint">会在目标大小内尽量取更高质量；若仍超标会进一步降分辨率。</div>
+                  </div>
+                </div>
+              </details>
+
+              <input type="hidden" name="crop_x" id="imgCompressCropX" />
+              <input type="hidden" name="crop_y" id="imgCompressCropY" />
+              <input type="hidden" name="crop_w" id="imgCompressCropW" />
+              <input type="hidden" name="crop_h" id="imgCompressCropH" />
+
+              <button class="btn primary" type="submit">压缩并预览</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="imgCompressResult" class="card wide" style="{% if not preview_url %}display:none{% endif %}">
+      <div class="hd">
+        <h3>预览与下载</h3>
+        <p>确认预览效果与体积后再下载。</p>
+      </div>
+      <div class="bd">
+        <div class="row" style="margin-bottom: 12px;">
+          <a id="imgCompressDownload" class="btn primary" href="{{ download_url or '#' }}">下载压缩后的图片</a>
+          <a id="imgCompressOriginalDownload" class="btn secondary" href="{{ original_download_url or '#' }}">下载原图副本</a>
+          <a class="btn secondary" href="{{ url_for('image.compress_page') }}">处理另一张图片</a>
+          <span class="muted">想改参数？直接修改后再次点击“压缩并预览”，无需重新选文件。</span>
+        </div>
+
+        <div id="imgCompressStats" class="ok" style="margin-bottom: 12px; {% if not stats %}display:none{% endif %}">
+          <span id="imgCompressStatsText"></span>
+        </div>
+
+        <div class="preview">
+          <div class="bar">
+            <div class="title">原图 vs 压缩结果</div>
+            <div id="imgCompressOriginalName" class="muted">{{ original_name or "" }}</div>
+          </div>
+          <div class="body">
+            <div class="cols" style="gap: 12px; padding: 12px;">
+              <div class="col-6">
+                <div class="muted" style="margin-bottom: 8px;">原图</div>
+                <img id="imgCompressBeforePreview" src="{{ original_preview_url or '' }}" alt="before" />
+              </div>
+              <div class="col-6">
+                <div class="muted" style="margin-bottom: 8px;">压缩后</div>
+                <img id="imgCompressAfterPreview" src="{{ preview_url or '' }}" alt="after" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/forms_ajax.js') }}"></script>
+  <script src="{{ url_for('static', filename='vendor/cropperjs/cropper.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/image_compress.js') }}"></script>
+  <script>
+    setupImageCompress({
+      form: "#imgCompressForm",
+      fileInput: "#imgCompressFile",
+      image: "#imgCompressCropImage",
+      ratioSelect: "#imgCompressRatio",
+      formatSelect: "#imgCompressFormat",
+      preserveAlpha: "#imgCompressPreserveAlpha",
+      background: "#imgCompressBg",
+      cropInfo: "#imgCompressCropInfo",
+      originalSize: "#imgCompressOrigSize",
+      outW: "#imgCompressOutW",
+      outH: "#imgCompressOutH",
+      outHint: "#imgCompressOutHint",
+      alphaHint: "#imgCompressAlphaHint",
+      cropPxW: "#imgCompressCropPW",
+      cropPxH: "#imgCompressCropPH",
+      cropX: "#imgCompressCropX",
+      cropY: "#imgCompressCropY",
+      cropW: "#imgCompressCropW",
+      cropH: "#imgCompressCropH",
+      resetBtn: "#imgCompressReset",
+      centerBtn: "#imgCompressCenter",
+    });
+
+    submitAjaxForm({
+      form: "#imgCompressForm",
+      errorBox: "#imgCompressError",
+      errorText: "#imgCompressErrorText",
+      submitBtn: "button[type='submit']",
+      submittingText: "处理中…",
+      onSuccess: (data) => {
+        document.querySelector("#imgCompressResult").style.display = "";
+        document.querySelector("#imgCompressBeforePreview").src = data.original_preview_url;
+        document.querySelector("#imgCompressAfterPreview").src = data.preview_url;
+        document.querySelector("#imgCompressDownload").href = data.download_url;
+        document.querySelector("#imgCompressOriginalDownload").href = data.original_download_url;
+        document.querySelector("#imgCompressOriginalName").textContent = data.original_name || "";
+
+        const statsBox = document.querySelector("#imgCompressStats");
+        const statsText = document.querySelector("#imgCompressStatsText");
+        if (statsBox && statsText && data.stats) {
+          const s = data.stats;
+          const kb = (n) => `${Math.round((n || 0) / 1024)} KB`;
+          const pct = (a, b) => b ? `${Math.round((a / b) * 100)}%` : "-";
+          const msg = `原图 ${s.original_w}×${s.original_h} / ${kb(s.original_size_bytes)}，输出 ${s.output_w}×${s.output_h} / ${kb(s.output_size_bytes)}（${pct(s.output_size_bytes, s.original_size_bytes)}），格式：${(s.format || "").toUpperCase()}${s.quality ? `，质量：${s.quality}` : ""}${s.downscaled_steps ? `，降分辨率：${s.downscaled_steps} 次` : ""}`;
+          statsText.textContent = msg;
+          statsBox.style.display = "";
+        } else if (statsBox) {
+          statsBox.style.display = "none";
+        }
+      },
+    });
+  </script>
+{% endblock %}

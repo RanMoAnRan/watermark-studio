@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 {% set title = "首页" %}
+{% set active = "home" %}
 
 {% block content %}
   <div class="hero">
     <h2>更清晰的文件，更专业的交付</h2>
-    <p>按功能模块划分：PDF 去水印支持在线预览结果；新增 PDF/图片加水印（大小/位置/样式可调）；图片去水印支持选择区域（不选则自动尝试）并预览后再下载。</p>
+    <p>按功能模块划分：PDF 去水印支持在线预览结果；PDF/图片加水印（大小/位置/样式可调）；图片去水印支持选择区域（不选则自动尝试）；图片压缩支持裁剪与按目标大小输出。</p>
   </div>
 
   <div class="grid">
@@ -51,6 +52,16 @@
         <span class="muted">支持预览后再下载</span>
       </div>
     </div>
+
+    <div class="card half">
+      <div class="hd">
+        <h3>图片压缩</h3>
+        <p>支持裁剪比例与输出像素选择，并可设置目标大小（默认不超过）以获得尽量清晰的结果。</p>
+      </div>
+      <div class="bd row">
+        <a class="btn primary" href="{{ url_for('image.compress_page') }}">开始压缩</a>
+        <span class="muted">支持 PNG/JPG/WEBP</span>
+      </div>
+    </div>
   </div>
 {% endblock %}
-

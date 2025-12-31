@@ -4,32 +4,63 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% if title %}{{ title }} · {% endif %}{{ app_name or "Watermark Studio" }}</title>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("wm_theme");
+          if (t) document.documentElement.setAttribute("data-theme", t);
+        } catch (e) {}
+      })();
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
+    {% block head %}{% endblock %}
   </head>
   <body>
     <div class="container">
-      <div class="topbar">
-        <a class="brand" href="{{ url_for('main.index') }}">
-          <div class="logo" aria-hidden="true"></div>
-          <div>
-            <h1>{{ app_name or "Watermark Studio" }}</h1>
-            <div class="sub">PDF / 图片水印：添加、去除、预览、下载</div>
-          </div>
-        </a>
-        <nav class="nav">
-          <a href="{{ url_for('pdf.remove_page') }}" class="{% if active == 'pdf_remove' %}active{% endif %}">PDF 去水印</a>
-          <a href="{{ url_for('pdf.add_page') }}" class="{% if active == 'pdf_add' %}active{% endif %}">PDF 加水印</a>
-          <a href="{{ url_for('image.add_page') }}" class="{% if active == 'img_add' %}active{% endif %}">图片加水印</a>
-          <a href="{{ url_for('image.remove_page') }}" class="{% if active == 'img_remove' %}active{% endif %}">图片去水印</a>
-        </nav>
+      <div class="theme_switcher">
+        <div class="row">
+          <label for="themeSelect">主题</label>
+          <select id="themeSelect" aria-label="主题">
+            <option value="default">默认</option>
+            <option value="light">浅色</option>
+            <option value="midnight">暗夜</option>
+            <option value="emerald">祖母绿</option>
+            <option value="rose">樱花</option>
+          </select>
+        </div>
       </div>
 
-      {% block content %}{% endblock %}
+      <div class="shell">
+        <aside class="sidebar">
+          <a class="brand" href="{{ url_for('main.index') }}">
+            <div class="logo" aria-hidden="true"></div>
+            <div>
+              <h1>{{ app_name or "Watermark Studio" }}</h1>
+              <div class="sub">PDF / 图片水印：添加、去除、预览、下载</div>
+            </div>
+          </a>
 
-      <div class="footer">
+          <nav class="nav">
+            <a href="{{ url_for('main.index') }}" class="{% if active == 'home' %}active{% endif %}">首页</a>
+            <a href="{{ url_for('pdf.remove_page') }}" class="{% if active == 'pdf_remove' %}active{% endif %}">PDF 去水印</a>
+            <a href="{{ url_for('pdf.add_page') }}" class="{% if active == 'pdf_add' %}active{% endif %}">PDF 加水印</a>
+            <a href="{{ url_for('image.add_page') }}" class="{% if active == 'img_add' %}active{% endif %}">图片加水印</a>
+            <a href="{{ url_for('image.remove_page') }}" class="{% if active == 'img_remove' %}active{% endif %}">图片去水印</a>
+            <a href="{{ url_for('image.compress_page') }}" class="{% if active == 'img_compress' %}active{% endif %}">图片压缩</a>
+          </nav>
+        </aside>
+
+        <main class="main">
+          {% block content %}{% endblock %}
+        </main>
+      </div>
+
+      <footer class="footer">
         <span class="pill">本工具仅在本地处理文件</span>
         <span class="pill">默认上限 50MB</span>
-      </div>
+      </footer>
     </div>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
   </body>
 </html>
