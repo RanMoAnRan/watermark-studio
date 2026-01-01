@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% set title = "网站打包 App" %}
+{% set active = "webapp_pack" %}
+
+{% block content %}
+  <div class="hero">
+    <h2>网站打包成 App</h2>
+    <p>输入一个网站地址，生成可下载的打包工程：PWA（可安装到桌面/手机）以及 Android / iOS（WebView 容器，Capacitor 工程）。</p>
+  </div>
+
+  <div class="grid">
+    <div class="card wide">
+      <div class="bd">
+        <div class="ok" style="margin-bottom: 12px;">
+          <div>说明：本功能不会抓取/复制网站源码，只是生成“壳工程”去加载你输入的网址。</div>
+          <div class="muted" style="margin-top: 6px;">限制：部分网站会禁止被 iframe 内嵌（X-Frame-Options / CSP）；PWA 壳会自动提示降级为“直接打开网站”。</div>
+        </div>
+
+        <div class="error" style="margin-bottom: 12px; {% if not error %}display:none{% endif %}">
+          <span>{{ error or "" }}</span>
+        </div>
+
+        <form action="{{ url_for('webapp.package_submit') }}" method="post" enctype="multipart/form-data">
+          <div class="cols">
+            <div class="col-7">
+              <div class="field">
+                <label>网站地址</label>
+                <input type="text" name="url" placeholder="https://example.com" value="{{ url or '' }}" required />
+                <div class="hint">支持 http/https；不写协议时默认 https。</div>
+              </div>
+
+              <div class="field">
+                <label>App 名称（可选）</label>
+                <input type="text" name="app_name" placeholder="例如：My Site" value="{{ app_name or '' }}" />
+                <div class="hint">可留空：将从域名自动生成。</div>
+              </div>
+
+              <div class="field">
+                <label>App ID / 包名（可选，Android/iOS 使用）</label>
+                <input type="text" name="app_id" placeholder="例如：com.example.myapp" value="{{ app_id or '' }}" />
+                <div class="hint">可留空：将从域名自动生成（仅允许字母/数字/下划线与点分段）。</div>
+              </div>
+
+              <div class="field">
+                <label>自定义图标（可选）</label>
+                <input type="file" name="icon" accept="image/*" />
+                <div class="hint">用于 PWA 图标与 Capacitor 工程的 <code>resources/icon.png</code>（后续可用 <code>npx capacitor-assets generate</code> 生成平台图标）。</div>
+              </div>
+            </div>
+
+            <div class="col-5">
+              <div class="field">
+                <label>主题色（图标/状态栏）</label>
+                <input type="color" name="theme_color" value="{{ theme_color or '#111827' }}" style="height: 42px; padding: 6px 8px;" />
+              </div>
+
+              <div class="row" style="gap: 10px;">
+                <button class="btn primary" type="submit" name="platform" value="pwa">下载 PWA 工程（zip）</button>
+                <button class="btn" type="submit" name="platform" value="android">下载 Android 工程（zip）</button>
+                <button class="btn" type="submit" name="platform" value="ios">下载 iOS 工程（zip）</button>
+                <button class="btn" type="submit" name="platform" value="all">下载 Android+iOS 工程（zip）</button>
+              </div>
+
+              <div class="muted" style="margin-top: 10px;">
+                说明：这里下载的是“工程模板”（多文件），所以以 zip 形式交付；APK/AAB/IPA 需要在本机/CI 按 README 用 Android Studio / Xcode 生成。
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
