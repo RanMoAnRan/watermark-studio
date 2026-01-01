@@ -8,6 +8,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from watermark_studio.blueprints.image import image_bp
 from watermark_studio.blueprints.main import main_bp
 from watermark_studio.blueprints.pdf import pdf_bp
+from watermark_studio.blueprints.webapp import webapp_bp
 
 
 def create_app() -> Flask:
@@ -24,6 +25,7 @@ def create_app() -> Flask:
     app.register_blueprint(main_bp)
     app.register_blueprint(pdf_bp, url_prefix="/pdf")
     app.register_blueprint(image_bp, url_prefix="/image")
+    app.register_blueprint(webapp_bp, url_prefix="/webapp")
 
     @app.context_processor
     def _inject_globals():

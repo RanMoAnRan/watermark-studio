@@ -63,5 +63,27 @@
         <span class="muted">支持 PNG/JPG/WEBP</span>
       </div>
     </div>
+
+    <div class="card half">
+      <div class="hd">
+        <h3>图片切分/拼装</h3>
+        <p>切分：一张图拆分成 2/4/6/9 张；拼装：多张图按样式组合成一张，可拖动调整裁切位置。</p>
+      </div>
+      <div class="bd row">
+        <a class="btn primary" href="{{ url_for('image.slice_page') }}">开始使用</a>
+        <span class="muted">支持切分与拼装</span>
+      </div>
+    </div>
+
+    <div class="card half">
+      <div class="hd">
+        <h3>网站打包 App</h3>
+        <p>输入网址，生成 PWA 包与 Android/iOS（Capacitor）壳工程，用于将网站作为 App 打开。</p>
+      </div>
+      <div class="bd row">
+        <a class="btn primary" href="{{ url_for('webapp.pack_page') }}">开始打包</a>
+        <span class="muted">支持 PWA / Android / iOS</span>
+      </div>
+    </div>
   </div>
 {% endblock %}

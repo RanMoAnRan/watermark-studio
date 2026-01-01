@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import io
+
 from flask import Blueprint, jsonify, render_template, request
+from flask import send_file
 
 from watermark_studio.services.image_tools import (
     ImageCompressOptions,
@@ -10,6 +13,7 @@ from watermark_studio.services.image_tools import (
     image_compress,
     image_remove_watermark,
 )
+from watermark_studio.services.image_slicer import ImageSliceOptions, slice_image
 from watermark_studio.services.storage import save_output_bytes
 from watermark_studio.utils.files import ensure_image_upload
 
@@ -181,4 +185,35 @@ def compress_submit():
         original_name=uploaded.filename,
         options=options,
         stats=stats,
+    )
+
+
+@image_bp.get("/slice")
+def slice_page():
+    return render_template("image/slice.html")
+
+
+@image_bp.post("/slice")
+def slice_submit():
+    try:
+        uploaded = ensure_image_upload(request.files.get("file"))
+        options = ImageSliceOptions.from_form(request.form)
+        _, zip_bytes = slice_image(uploaded.bytes, filename=uploaded.filename, options=options)
+    except Exception as exc:
+        if _wants_json():
+            return jsonify(ok=False, error=f"处理失败：{exc}"), 400
+        return render_template(
+            "image/slice.html",
+            error=f"处理失败：{exc}",
+            options=ImageSliceOptions.from_form(request.form),
+        ), 400
+
+    rows, cols = options.rows_cols
+    zip_name = f"{uploaded.stem}_{rows}x{cols}.zip"
+    return send_file(
+        io.BytesIO(zip_bytes),
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=zip_name,
+        max_age=0,
     )

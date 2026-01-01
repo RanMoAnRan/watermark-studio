@@ -16,6 +16,7 @@
     {% block head %}{% endblock %}
   </head>
   <body>
+    <canvas id="bgParticles" class="bg_particles" aria-hidden="true"></canvas>
     <div class="container">
       <div class="theme_switcher">
         <div class="row">
@@ -47,6 +48,8 @@
             <a href="{{ url_for('image.add_page') }}" class="{% if active == 'img_add' %}active{% endif %}">图片加水印</a>
             <a href="{{ url_for('image.remove_page') }}" class="{% if active == 'img_remove' %}active{% endif %}">图片去水印</a>
             <a href="{{ url_for('image.compress_page') }}" class="{% if active == 'img_compress' %}active{% endif %}">图片压缩</a>
+            <a href="{{ url_for('image.slice_page') }}" class="{% if active == 'img_slice' %}active{% endif %}">图片切分/拼装</a>
+            <a href="{{ url_for('webapp.pack_page') }}" class="{% if active == 'webapp_pack' %}active{% endif %}">网站打包 App</a>
           </nav>
         </aside>
 
@@ -62,5 +65,6 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/particles.js') }}"></script>
   </body>
 </html>

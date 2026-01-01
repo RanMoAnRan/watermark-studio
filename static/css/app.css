@@ -91,6 +91,15 @@ body {
   color: var(--text);
 }
 
+.bg_particles {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
 a { color: inherit; text-decoration: none; }
 a:hover { text-decoration: underline; }
 
@@ -101,6 +110,8 @@ a:hover { text-decoration: underline; }
   padding: 0;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
 }
 .shell {
   display: grid;
