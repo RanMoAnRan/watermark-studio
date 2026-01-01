@@ -12,6 +12,9 @@
   --bg_grad1: rgba(124, 58, 237, 0.24);
   --bg_grad2: rgba(34, 197, 94, 0.16);
   --bg_grad3: rgba(59, 130, 246, 0.10);
+  --fx_grid: rgba(255, 255, 255, 0.06);
+  --fx_scan: rgba(255, 255, 255, 0.05);
+  --fx_particles_opacity: 0.95;
 }
 
 [data-theme="light"] {
@@ -28,6 +31,9 @@
   --bg_grad1: rgba(37, 99, 235, 0.16);
   --bg_grad2: rgba(22, 163, 74, 0.12);
   --bg_grad3: rgba(124, 58, 237, 0.10);
+  --fx_grid: rgba(11, 18, 32, 0.07);
+  --fx_scan: rgba(11, 18, 32, 0.05);
+  --fx_particles_opacity: 0.55;
 }
 
 [data-theme="midnight"] {
@@ -91,6 +97,36 @@ body {
   color: var(--text);
 }
 
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    linear-gradient(to right, var(--fx_grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--fx_grid) 1px, transparent 1px);
+  background-size: 68px 68px;
+  opacity: 0.10;
+  mask-image: radial-gradient(900px 700px at 12% 12%, rgba(0, 0, 0, 0.9), transparent 70%);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(to bottom, var(--fx_scan) 1px, transparent 5px);
+  background-size: 100% 8px;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+}
+[data-theme="light"] body::after { mix-blend-mode: multiply; opacity: 0.05; }
+@media (prefers-reduced-motion: reduce) {
+  body::after { display: none; }
+}
+
 .bg_particles {
   position: fixed;
   inset: 0;
@@ -98,6 +134,9 @@ body {
   height: 100%;
   pointer-events: none;
   z-index: 0;
+  opacity: var(--fx_particles_opacity);
+  mix-blend-mode: screen;
+  will-change: transform;
 }
 
 a { color: inherit; text-decoration: none; }
