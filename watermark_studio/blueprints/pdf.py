@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 
 from watermark_studio.services.pdf_tools import (
     PdfImageWatermarkOptions,
@@ -10,7 +10,7 @@ from watermark_studio.services.pdf_tools import (
     pdf_add_image_watermark,
     pdf_add_text_watermark,
 )
-from watermark_studio.services.storage import save_output_bytes
+from watermark_studio.services.storage import OutputNotFoundError, get_output_file, save_output_bytes
 from watermark_studio.utils.files import ensure_image_upload, ensure_pdf_upload
 
 pdf_bp = Blueprint("pdf", __name__)
@@ -19,10 +19,113 @@ def _wants_json() -> bool:
     best = request.accept_mimetypes.best or ""
     return best == "application/json" or request.accept_mimetypes["application/json"] >= request.accept_mimetypes["text/html"]
 
+def _viewer_url_add(job_id: str) -> str:
+    return url_for("pdf.view_add_job", job_id=job_id)
+
+
+def _viewer_url_remove(job_id: str) -> str:
+    return url_for("pdf.view_remove_job", job_id=job_id)
+
+
+def _parse_intent(default: str = "display") -> str:
+    intent = (request.args.get("intent") or "").strip().lower()
+    if intent == "print":
+        return "print"
+    if intent == "display":
+        return "display"
+    return "print" if default == "print" else "display"
+
+
+def _render_viewer_for_job(job_id: str, *, intent_default: str) -> tuple[str, int] | str:
+    page_raw = (request.args.get("page") or "").strip()
+    try:
+        page = int(page_raw) if page_raw else 1
+    except ValueError:
+        page = 1
+    page = max(1, page)
+
+    intent = _parse_intent(intent_default)
+    try:
+        output = get_output_file(job_id)
+    except OutputNotFoundError:
+        return (
+            render_template(
+                "error.html",
+                title="文件不存在",
+                message="该预览/下载链接已失效，或文件已被清理。",
+            ),
+            404,
+        )
+
+    return render_template(
+        "pdf/viewer.html",
+        file_url=f"/files/{output.job_id}",
+        page=page,
+        download_name=output.download_name,
+        intent=intent,
+    )
+
+
+@pdf_bp.get("/viewer")
+def viewer():
+    file_url = (request.args.get("file") or "").strip()
+    page_raw = (request.args.get("page") or "").strip()
+    try:
+        page = int(page_raw) if page_raw else 1
+    except ValueError:
+        page = 1
+    page = max(1, page)
+
+    if not file_url.startswith("/files/"):
+        return render_template(
+            "error.html",
+            title="预览不可用",
+            message="无效的预览地址。",
+        ), 400
+
+    intent = _parse_intent("display")
+    download_name = ""
+    try:
+        job_id = file_url.removeprefix("/files/").strip()
+        if job_id:
+            download_name = get_output_file(job_id).download_name
+    except Exception:
+        download_name = ""
+
+    return render_template(
+        "pdf/viewer.html",
+        file_url=file_url,
+        page=page,
+        download_name=download_name,
+        intent=intent,
+    )
+
+
+@pdf_bp.get("/view/<job_id>")
+def view_job(job_id: str):
+    return _render_viewer_for_job(job_id, intent_default="display")
+
+
+@pdf_bp.get("/view-add/<job_id>")
+def view_add_job(job_id: str):
+    return _render_viewer_for_job(job_id, intent_default="display")
+
+
+@pdf_bp.get("/view-remove/<job_id>")
+def view_remove_job(job_id: str):
+    return _render_viewer_for_job(job_id, intent_default="print")
+
+@pdf_bp.get("/")
+def studio_page():
+    tab = (request.args.get("tab") or "").strip().lower()
+    if tab not in {"remove", "add"}:
+        tab = "remove"
+    return render_template("pdf/studio.html", tab=tab)
+
 
 @pdf_bp.get("/remove")
 def remove_page():
-    return render_template("pdf/remove.html")
+    return redirect(url_for("pdf.studio_page", tab="remove"))
 
 
 @pdf_bp.post("/remove")
@@ -36,10 +139,11 @@ def remove_submit():
         if _wants_json():
             return jsonify(ok=False, error=f"处理失败：{exc}"), 400
         return render_template(
-            "pdf/remove.html",
-            error=f"处理失败：{exc}",
-            enhanced=request.form.get("enhanced") == "on",
-            remove_images=request.form.get("remove_images") == "on",
+            "pdf/studio.html",
+            tab="remove",
+            remove_error=f"处理失败：{exc}",
+            remove_enhanced=request.form.get("enhanced") == "on",
+            remove_remove_images=request.form.get("remove_images") == "on",
         ), 400
 
     original_name = uploaded.stem + "_original.pdf"
@@ -54,8 +158,10 @@ def remove_submit():
         "job_id": job_id,
         "original_preview_url": f"/files/{original_job_id}",
         "original_download_url": f"/files/{original_job_id}?download=1",
+        "original_viewer_url": _viewer_url_remove(original_job_id),
         "preview_url": f"/files/{job_id}",
         "download_url": f"/files/{job_id}?download=1",
+        "viewer_url": _viewer_url_remove(job_id),
         "original_name": uploaded.filename,
         "stats": {
             "removed_watermark_annots": result.removed_watermark_annots,
@@ -69,24 +175,24 @@ def remove_submit():
         return jsonify(payload)
 
     return render_template(
-        "pdf/remove.html",
-        original_job_id=original_job_id,
-        job_id=job_id,
-        original_preview_url=f"/files/{original_job_id}",
-        preview_url=f"/files/{job_id}",
-        original_download_url=f"/files/{original_job_id}?download=1",
-        download_url=f"/files/{job_id}?download=1",
-        stats=result,
-        text_compare=text_compare,
-        enhanced=enhanced,
-        remove_images=remove_images,
-        original_name=uploaded.filename,
+        "pdf/studio.html",
+        tab="remove",
+        remove_original_job_id=original_job_id,
+        remove_job_id=job_id,
+        remove_preview_url=f"/files/{job_id}",
+        remove_original_download_url=f"/files/{original_job_id}?download=1",
+        remove_download_url=f"/files/{job_id}?download=1",
+        remove_stats=result,
+        remove_text_compare=text_compare,
+        remove_enhanced=enhanced,
+        remove_remove_images=remove_images,
+        remove_original_name=uploaded.filename,
     )
 
 
 @pdf_bp.get("/add-watermark")
 def add_page():
-    return render_template("pdf/add_watermark.html")
+    return redirect(url_for("pdf.studio_page", tab="add"))
 
 
 @pdf_bp.post("/add-watermark")
@@ -111,34 +217,45 @@ def add_submit():
         if _wants_json():
             return jsonify(ok=False, error=f"处理失败：{exc}"), 400
         return render_template(
-            "pdf/add_watermark.html",
-            error=f"处理失败：{exc}",
-            mode=request.form.get("mode") or "text",
-            text=request.form.get("text") or "",
-            options=PdfTextWatermarkOptions.from_form(request.form),
-            img_options=PdfImageWatermarkOptions.from_form(request.form),
+            "pdf/studio.html",
+            tab="add",
+            add_error=f"处理失败：{exc}",
+            add_mode=request.form.get("mode") or "text",
+            add_text=request.form.get("text") or "",
+            add_options=PdfTextWatermarkOptions.from_form(request.form),
+            add_img_options=PdfImageWatermarkOptions.from_form(request.form),
         ), 400
 
+    original_name = uploaded.stem + "_original.pdf"
+    original_job_id = save_output_bytes(uploaded.bytes, download_name=original_name, mimetype="application/pdf")
     download_name = uploaded.stem + "_watermarked.pdf"
     job_id = save_output_bytes(output_bytes, download_name=download_name, mimetype="application/pdf")
     payload = {
         "ok": True,
+        "original_job_id": original_job_id,
         "job_id": job_id,
+        "original_preview_url": f"/files/{original_job_id}",
+        "original_download_url": f"/files/{original_job_id}?download=1",
+        "original_viewer_url": _viewer_url_add(original_job_id),
         "preview_url": f"/files/{job_id}",
         "download_url": f"/files/{job_id}?download=1",
+        "viewer_url": _viewer_url_add(job_id),
         "original_name": uploaded.filename,
     }
     if _wants_json():
         return jsonify(payload)
 
     return render_template(
-        "pdf/add_watermark.html",
-        job_id=job_id,
-        preview_url=f"/files/{job_id}",
-        download_url=f"/files/{job_id}?download=1",
-        original_name=uploaded.filename,
-        mode=mode,
-        options=PdfTextWatermarkOptions.from_form(request.form),
-        img_options=PdfImageWatermarkOptions.from_form(request.form),
-        text=(request.form.get("text") or "").strip(),
+        "pdf/studio.html",
+        tab="add",
+        add_original_job_id=original_job_id,
+        add_job_id=job_id,
+        add_preview_url=f"/files/{job_id}",
+        add_original_download_url=f"/files/{original_job_id}?download=1",
+        add_download_url=f"/files/{job_id}?download=1",
+        add_original_name=uploaded.filename,
+        add_mode=mode,
+        add_options=PdfTextWatermarkOptions.from_form(request.form),
+        add_img_options=PdfImageWatermarkOptions.from_form(request.form),
+        add_text=(request.form.get("text") or "").strip(),
     )

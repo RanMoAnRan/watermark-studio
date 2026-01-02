@@ -312,6 +312,38 @@ input[type="range"] { width: 100%; }
 .preview img { width: 100%; display: block; }
 .preview canvas { width: 100%; display: block; }
 
+.field.file-drop {
+  position: relative;
+  border-radius: 16px;
+}
+.field.file-drop.is-dragover {
+  outline: 2px dashed rgba(124, 58, 237, 0.75);
+  outline-offset: 6px;
+  background: rgba(124, 58, 237, 0.07);
+}
+[data-theme="light"] .field.file-drop.is-dragover {
+  outline-color: rgba(37, 99, 235, 0.70);
+  background: rgba(37, 99, 235, 0.08);
+}
+.field.file-drop.is-dragover::after {
+  content: "松开即可上传";
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.28);
+  color: rgba(229, 231, 235, 0.92);
+  pointer-events: none;
+}
+[data-theme="light"] .field.file-drop.is-dragover::after {
+  border-color: rgba(11, 18, 32, 0.14);
+  background: rgba(255, 255, 255, 0.75);
+  color: rgba(11, 18, 32, 0.85);
+}
+
 .footer {
   padding: 14px 18px 18px;
   color: rgba(229,231,235,0.5);

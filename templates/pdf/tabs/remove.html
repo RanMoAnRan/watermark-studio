@@ -1,13 +1,3 @@
-{% extends "base.html" %}
-{% set title = "PDF 去水印" %}
-{% set active = "pdf_remove" %}
-
-{% block content %}
-  <div class="hero">
-    <h2>PDF 去水印</h2>
-    <p>上传 PDF → 自动尝试移除“Watermark 标记内容 / 常见注释水印 / 低透明度块（可选）” → 在线预览 → 下载结果。</p>
-  </div>
-
   <div class="grid">
     <div class="card wide">
       <div class="bd">
@@ -66,7 +56,7 @@
         <div class="row" style="margin-bottom: 12px;">
           <a id="pdfRemoveDownload" class="btn primary" href="{{ download_url or '#' }}">下载处理后的 PDF</a>
           <a id="pdfRemoveOriginalDownload" class="btn secondary" href="{{ original_download_url or '#' }}">下载原文件副本</a>
-          <a class="btn secondary" href="{{ url_for('pdf.remove_page') }}">处理另一个文件</a>
+          <a class="btn secondary" href="{{ url_for('pdf.studio_page', tab='remove') }}">处理另一个文件</a>
           <span class="muted">想改参数？直接修改后再次点击“处理并预览”，无需重新选文件。</span>
         </div>
 
@@ -82,14 +72,21 @@
             <div class="muted">如预览空白，请直接下载查看</div>
           </div>
           <div class="body">
-            <div class="cols" style="gap: 12px; padding: 12px;">
+            <div class="row" style="padding: 12px; gap: 12px; align-items: center;">
+              <div class="row" style="gap: 8px; align-items: center;">
+                <span class="muted">页码</span>
+                <input id="pdfRemoveSyncPage" type="number" min="1" value="1" style="width: 90px;" />
+                <button id="pdfRemoveGoPage" class="btn secondary" type="button">跳转</button>
+              </div>
+            </div>
+            <div class="cols" style="gap: 12px; padding: 0 12px 12px;">
               <div class="col-6">
                 <div class="muted" style="margin-bottom: 8px;">原文件</div>
-                <iframe id="pdfRemoveBeforeIframe" src="{{ original_preview_url or '' }}" style="height: 520px;"></iframe>
+                <iframe id="pdfRemoveBeforeIframe" src="{% if original_job_id %}/files/{{ original_job_id }}#page=1{% else %}{% endif %}" style="height: 520px;"></iframe>
               </div>
               <div class="col-6">
                 <div class="muted" style="margin-bottom: 8px;">去水印后</div>
-                <iframe id="pdfRemoveAfterIframe" src="{{ preview_url or '' }}" style="height: 520px;"></iframe>
+                <iframe id="pdfRemoveAfterIframe" src="{% if job_id %}/files/{{ job_id }}#page=1{% else %}{% endif %}" style="height: 520px;"></iframe>
               </div>
             </div>
           </div>
@@ -98,8 +95,38 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='js/forms_ajax.js') }}"></script>
   <script>
+    (function () {
+      const pageInput = document.querySelector("#pdfRemoveSyncPage");
+      const left = document.querySelector("#pdfRemoveBeforeIframe");
+      const right = document.querySelector("#pdfRemoveAfterIframe");
+
+      let ids = {
+        original: {{ (original_job_id or "") | tojson }},
+        cleaned: {{ (job_id or "") | tojson }},
+      };
+
+      function getPage() {
+        return Math.max(1, parseInt((pageInput && pageInput.value) || "1", 10) || 1);
+      }
+
+      function buildIframeSrc(jobId, page) {
+        if (!jobId) return "";
+        return `/files/${encodeURIComponent(jobId)}#page=${page}`;
+      }
+
+      function refreshPreviews() {
+        const p = getPage();
+        if (left) left.src = buildIframeSrc(ids.original, p);
+        if (right) right.src = buildIframeSrc(ids.cleaned, p);
+      }
+
+      window.__setPdfRemoveIds = (originalJobId, cleanedJobId) => {
+        ids = { original: originalJobId || "", cleaned: cleanedJobId || "" };
+        refreshPreviews();
+      };
+    })();
+
     submitAjaxForm({
       form: "#pdfRemoveForm",
       errorBox: "#pdfRemoveError",
@@ -109,8 +136,7 @@
       onSuccess: (data) => {
         document.querySelector("#pdfRemoveResult").style.display = "";
         document.querySelector("#pdfRemoveStats").style.display = "";
-        document.querySelector("#pdfRemoveBeforeIframe").src = data.original_preview_url;
-        document.querySelector("#pdfRemoveAfterIframe").src = data.preview_url;
+        window.__setPdfRemoveIds?.(data.original_job_id, data.job_id);
         document.querySelector("#pdfRemoveDownload").href = data.download_url;
         document.querySelector("#pdfRemoveOriginalDownload").href = data.original_download_url;
         document.querySelector("#pdfRemoveOriginalName").textContent = data.original_name || "";
@@ -130,5 +156,31 @@
         }
       },
     });
+
+    (function () {
+      const pageInput = document.querySelector("#pdfRemoveSyncPage");
+      const goBtn = document.querySelector("#pdfRemoveGoPage");
+      const left = document.querySelector("#pdfRemoveBeforeIframe");
+      const right = document.querySelector("#pdfRemoveAfterIframe");
+
+      function setPage(iframe, page) {
+        if (!iframe) return;
+        const raw = iframe.getAttribute("src") || "";
+        if (!raw) return;
+        const base = raw.split("#")[0];
+        iframe.src = `${base}#page=${page}`;
+      }
+
+      function go() {
+        const p = Math.max(1, parseInt((pageInput && pageInput.value) || "1", 10) || 1);
+        setPage(left, p);
+        setPage(right, p);
+      }
+
+      if (goBtn) goBtn.addEventListener("click", go);
+      if (pageInput) pageInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") go();
+      });
+    })();
   </script>
-{% endblock %}
+

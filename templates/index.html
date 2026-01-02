@@ -15,7 +15,7 @@
         <p>自动尝试清理标记为 Watermark 的内容块与常见注释水印，并提供预览。</p>
       </div>
       <div class="bd row">
-        <a class="btn primary" href="{{ url_for('pdf.remove_page') }}">开始处理</a>
+        <a class="btn primary" href="{{ url_for('pdf.studio_page', tab='remove') }}">开始处理</a>
         <span class="muted">适合：注释/标记型水印</span>
       </div>
     </div>
@@ -26,7 +26,7 @@
         <p>支持平铺/单点文字水印，调整大小、位置、颜色、不透明度与旋转角度。</p>
       </div>
       <div class="bd row">
-        <a class="btn primary" href="{{ url_for('pdf.add_page') }}">添加水印</a>
+        <a class="btn primary" href="{{ url_for('pdf.studio_page', tab='add') }}">添加水印</a>
         <span class="muted">输出可预览后下载</span>
       </div>
     </div>
@@ -37,7 +37,7 @@
         <p>文字水印：大小、位置、样式（平铺/单点）、旋转与透明度可调。</p>
       </div>
       <div class="bd row">
-        <a class="btn primary" href="{{ url_for('image.add_page') }}">开始添加</a>
+        <a class="btn primary" href="{{ url_for('image.studio_page', tab='add') }}">开始添加</a>
         <span class="muted">支持 PNG/JPG/WEBP</span>
       </div>
     </div>
@@ -48,7 +48,7 @@
         <p>可框选水印位置精准去除；不选时自动尝试检测并修复。</p>
       </div>
       <div class="bd row">
-        <a class="btn primary" href="{{ url_for('image.remove_page') }}">开始去水印</a>
+        <a class="btn primary" href="{{ url_for('image.studio_page', tab='remove') }}">开始去水印</a>
         <span class="muted">支持预览后再下载</span>
       </div>
     </div>

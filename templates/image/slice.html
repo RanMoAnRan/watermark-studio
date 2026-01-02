@@ -3,27 +3,32 @@
 {% set active = "img_slice" %}
 
 {% block content %}
-  <div class="hero">
-    <h2>图片切分/拼装</h2>
-    <p>切分：一张图按样式拆分多张；拼装：多张图按样式组合成一张，可拖动调整位置。</p>
-  </div>
+  {% set initial_tab = (tab or "")|lower %}
+  {% if initial_tab != "compose" and initial_tab != "slice" %}
+    {% set initial_tab = "compose" if (compose_error or preview_url or download_url) else "slice" %}
+  {% endif %}
+
+	  <div class="hero">
+	    <h2>图片切分/拼装</h2>
+	    <p>切分：一张图按样式拆分多张；拼装：多张图按样式组合成一张（后端生成预览并可下载）。</p>
+	  </div>
 
   <div class="grid">
     <div class="card wide">
       <div class="bd">
-        <div class="row" style="margin-bottom: 12px;">
-          <button id="tabSlice" class="btn primary" type="button">切分</button>
-          <button id="tabCompose" class="btn secondary" type="button">拼装</button>
-          <span class="muted">切换后当前配置会保留</span>
-        </div>
+	        <div class="row" style="margin-bottom: 12px;">
+	          <button id="tabSlice" class="btn {{ 'primary' if initial_tab == 'slice' else 'secondary' }}" type="button">切分</button>
+	          <button id="tabCompose" class="btn {{ 'primary' if initial_tab == 'compose' else 'secondary' }}" type="button">拼装</button>
+	          <span class="muted">切换后当前配置会保留</span>
+	        </div>
 
         <div id="imgSliceError" class="error" style="margin-bottom: 12px; {% if not error %}display:none{% endif %}">
           <span id="imgSliceErrorText">{{ error or "" }}</span>
         </div>
 
-        <form id="imgSliceForm" action="{{ url_for('image.slice_submit') }}" method="post" enctype="multipart/form-data" target="_blank">
-          <div class="cols">
-            <div class="col-7">
+	        <form id="imgSliceForm" action="{{ url_for('image.slice_submit') }}" method="post" enctype="multipart/form-data" target="_blank" style="{% if initial_tab != 'slice' %}display:none{% endif %}">
+	          <div class="cols">
+	            <div class="col-7">
               <div class="field">
                 <label>选择图片</label>
                 <input id="imgSliceFile" type="file" name="file" accept="image/*" required />
@@ -58,66 +63,112 @@
           </div>
         </form>
 
-        <div class="preview" style="margin-top: 14px;">
-          <div class="bar">
-            <div class="title">切分预览</div>
-            <div id="imgSlicePreviewMeta" class="muted"></div>
-          </div>
-          <div class="body">
-            <canvas id="imgSliceCanvas" style="height: 520px;"></canvas>
-          </div>
-        </div>
+	        <div class="preview" style="margin-top: 14px; {% if initial_tab != 'slice' %}display:none{% endif %}">
+	          <div class="bar">
+	            <div class="title">切分预览</div>
+	            <div id="imgSlicePreviewMeta" class="muted"></div>
+	          </div>
+	          <div class="body">
+	            <canvas id="imgSliceCanvas" style="height: 520px;"></canvas>
+	          </div>
+	        </div>
 
-        <div id="composeWrap" style="display:none;">
-          <div class="cols" style="margin-top: 16px;">
-            <div class="col-7">
-              <div class="field">
-                <label>选择多张图片</label>
-                <input id="imgComposeFiles" type="file" accept="image/*" multiple />
-                <div class="hint">图片只在本地浏览器处理；按选择顺序自动填充拼装格子。</div>
+	        <div id="composeWrap" style="{% if initial_tab == 'slice' %}display:none{% endif %}">
+	          <form id="imgComposeForm" action="{{ url_for('image.compose_submit') }}" method="post" enctype="multipart/form-data">
+	            <div class="cols" style="margin-top: 16px;">
+	              <div class="col-7">
+	                <div id="imgComposeError" class="error" style="margin-bottom: 12px; {% if not compose_error %}display:none{% endif %}">
+	                  <span id="imgComposeErrorText">{{ compose_error or "" }}</span>
+	                </div>
+
+                <div class="field">
+                  <label>选择多张图片</label>
+                  <input id="imgComposeFiles" type="file" name="files" accept="image/*" multiple required />
+                  <div class="hint">为兼容 Edge 等浏览器，拼装改为后端生成：点击“生成预览”后可预览并下载成品。</div>
+                </div>
+
+	                <div class="preview">
+	                  <div class="bar">
+	                    <div class="title">拼装预览（美图秀秀风格模板）</div>
+	                    <div id="imgComposeMeta" class="muted">{% if compose_meta %}{{ (compose_meta.layout_name or '') ~ ' · ' ~ compose_meta.out_w ~ '×' ~ compose_meta.out_h ~ 'px' }}{% endif %}</div>
+	                  </div>
+	                  <div class="body" style="padding: 12px;">
+	                    <img id="imgComposePreview" alt="compose" style="width: 100%; display:block;" {% if preview_url %}src="{{ preview_url }}"{% endif %} />
+	                  </div>
+	                </div>
+
+                <div class="preview" style="margin-top: 12px;">
+                  <div class="bar">
+                    <div class="title">下载</div>
+                    <div class="muted">生成后可直接下载</div>
+                  </div>
+			                  <div class="body">
+			                    <div class="row" style="padding: 12px;">
+			                      <a id="imgComposeDownload" class="btn primary" href="{{ download_url or '#' }}" style="{% if not download_url %}pointer-events:none; opacity:0.6;{% endif %}">下载拼装图片</a>
+			                      <a class="btn secondary" href="{{ url_for('image.slice_page') }}?tab=compose">清空重新拼</a>
+			                    </div>
+			                  </div>
+			                </div>
               </div>
-              <div class="preview">
-                <div class="bar">
-                  <div class="title">拼装预览（可拖动图片调整位置）</div>
-                  <div id="imgComposeMeta" class="muted"></div>
+
+              <div class="col-5">
+                <div class="field">
+                  <label>拼装样式</label>
+                  <select id="imgComposeLayout" name="layout">
+                    <option value="mt_2_lr" selected>两张（左右）</option>
+                    <option value="mt_2_tb">两张（上下）</option>
+                    <option value="mt_3_lr">三张（左右）</option>
+                    <option value="mt_3_tb">三张（上下）</option>
+                    <option value="mt_big_left_2">三张（左大右二）</option>
+                    <option value="mt_big_top_2">三张（上大下二）</option>
+                    <option value="mt_4">四宫格（2×2）</option>
+                    <option value="mt_6">六宫格（2×3）</option>
+                    <option value="mt_9">九宫格（3×3）</option>
+                  </select>
                 </div>
-                <div class="body">
-                  <canvas id="imgComposeCanvas" style="height: 520px;"></canvas>
+                <div class="field">
+                  <label>导出宽度（像素）</label>
+                  <input id="imgComposeWidth" name="out_w_px" type="number" min="512" max="8192" value="2048" />
+                  <div class="hint">高度会按样式自动计算；越大越清晰但生成更慢。</div>
                 </div>
+                <div class="field">
+                  <label>边距 / 间距</label>
+                  <div class="row">
+                    <div style="flex:1; min-width: 120px;">
+                      <input name="padding_px" type="number" min="0" max="400" value="12" placeholder="外边距(px)" />
+                    </div>
+                    <div style="flex:1; min-width: 120px;">
+                      <input name="gap_px" type="number" min="0" max="200" value="12" placeholder="间距(px)" />
+                    </div>
+                  </div>
+                </div>
+                <div class="field">
+                  <label>圆角 / 背景</label>
+                  <div class="row">
+                    <div style="flex:1; min-width: 120px;">
+                      <input name="radius_px" type="number" min="0" max="400" value="18" placeholder="圆角(px)" />
+                    </div>
+                    <div style="flex:1; min-width: 120px;">
+                      <input name="bg_color" type="color" value="#ffffff" />
+                    </div>
+                  </div>
+                </div>
+                <div class="field">
+                  <label>导出格式</label>
+                  <select id="imgComposeFormat" name="output_format">
+                    <option value="png">PNG（无损）</option>
+                    <option value="webp">WEBP（无损）</option>
+                    <option value="jpg">JPG（高质量）</option>
+                  </select>
+                </div>
+                <div class="row">
+                  <button id="imgComposeSubmit" class="btn primary" type="submit">生成预览</button>
+                  <button class="btn secondary" type="reset">重置参数</button>
+                </div>
+                <div class="hint">提示：图片会按“居中裁切”填充每个格子（类似美图秀秀拼图）；想换顺序请在文件选择器里调整选图顺序。</div>
               </div>
             </div>
-
-            <div class="col-5">
-              <div class="field">
-                <label>拼装样式</label>
-                <select id="imgComposeLayout">
-                  <option value="split_v2">两张（左右）</option>
-                  <option value="split_h2">两张（上下）</option>
-                  <option value="grid_2">四宫格（2×2）</option>
-                  <option value="grid_2x3">六宫格（2×3）</option>
-                  <option value="grid_3">九宫格（3×3）</option>
-                </select>
-              </div>
-              <div class="field">
-                <label>导出宽度（像素）</label>
-                <input id="imgComposeWidth" type="number" min="512" max="8192" value="2048" />
-                <div class="hint">高度会按拼装样式自动计算；越大越清晰但导出更慢。</div>
-              </div>
-              <div class="field">
-                <label>导出格式</label>
-                <select id="imgComposeFormat">
-                  <option value="png">PNG（无损）</option>
-                  <option value="webp">WEBP（无损）</option>
-                  <option value="jpg">JPG（高质量）</option>
-                </select>
-              </div>
-              <div class="row">
-                <button id="imgComposeExport" class="btn primary" type="button">导出为一张图片</button>
-                <button id="imgComposeReset" class="btn secondary" type="button">重置位置</button>
-              </div>
-              <div class="hint">拖动：在预览图里按住并拖动某一格内的图片即可调整裁切位置。</div>
-            </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>
@@ -256,11 +307,71 @@
         if (loadedImg) draw();
       });
 
-      clear();
-      setTab("slice");
-      tabSlice.addEventListener("click", () => setTab("slice"));
-      tabCompose.addEventListener("click", () => setTab("compose"));
-    })();
-  </script>
-  <script src="{{ url_for('static', filename='js/image_compose.js') }}"></script>
+		      clear();
+		      const params = new URLSearchParams(window.location.search || "");
+		      const serverTab = "{{ (tab or '')|lower }}";
+		      const tab = (params.get("tab") || serverTab || "").toLowerCase();
+		      setTab(tab === "compose" ? "compose" : "slice");
+		      tabSlice.addEventListener("click", () => setTab("slice"));
+		      tabCompose.addEventListener("click", () => setTab("compose"));
+		    })();
+	  </script>
+  <script src="{{ url_for('static', filename='js/forms_ajax.js', v=static_version) }}"></script>
+  <script>
+	    submitAjaxForm({
+	      form: "#imgComposeForm",
+	      errorBox: "#imgComposeError",
+	      errorText: "#imgComposeErrorText",
+	      submitBtn: "button[type='submit']",
+	      submittingText: "生成中…",
+	      onStart: () => {
+	        const img = document.querySelector("#imgComposePreview");
+	        const meta = document.querySelector("#imgComposeMeta");
+	        const dl = document.querySelector("#imgComposeDownload");
+	
+	        if (img) {
+	          img.onerror = null;
+	          img.removeAttribute("src");
+	        }
+	        if (meta) meta.textContent = "";
+	        if (dl) {
+	          dl.href = "#";
+	          dl.style.pointerEvents = "none";
+	          dl.style.opacity = "0.6";
+	        }
+	      },
+	      onSuccess: (data) => {
+	        const img = document.querySelector("#imgComposePreview");
+	        const meta = document.querySelector("#imgComposeMeta");
+	        const dl = document.querySelector("#imgComposeDownload");
+
+        if (img) {
+          img.onerror = () => {
+            const err = document.querySelector("#imgComposeError");
+            const errText = document.querySelector("#imgComposeErrorText");
+            if (err) err.style.display = "";
+            if (errText) errText.textContent = "预览图片加载失败（可尝试新标签打开预览链接）。";
+          };
+          img.src = data.preview_url;
+        }
+        if (meta && data.meta) {
+          meta.textContent = `${data.meta.layout_name || ""} · ${data.meta.out_w}×${data.meta.out_h}px`;
+        }
+
+	        if (dl) {
+	          dl.href = data.download_url;
+	          dl.style.pointerEvents = "";
+	          dl.style.opacity = "1";
+	        }
+	      },
+	      onError: () => {
+	        const dl = document.querySelector("#imgComposeDownload");
+	        if (dl) {
+	          dl.href = "#";
+	          dl.style.pointerEvents = "none";
+	          dl.style.opacity = "0.6";
+	        }
+	      },
+	    });
+	  </script>
 {% endblock %}

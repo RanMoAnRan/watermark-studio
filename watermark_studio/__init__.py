@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 from flask import Flask, render_template
@@ -21,6 +22,7 @@ def create_app() -> Flask:
     )
     app.config.setdefault("MAX_CONTENT_LENGTH", 50 * 1024 * 1024)  # 50MB
     app.config.setdefault("APP_NAME", "Watermark Studio")
+    app.config.setdefault("STATIC_VERSION", str(int(time.time())))
 
     app.register_blueprint(main_bp)
     app.register_blueprint(pdf_bp, url_prefix="/pdf")
@@ -29,7 +31,10 @@ def create_app() -> Flask:
 
     @app.context_processor
     def _inject_globals():
-        return {"app_name": app.config.get("APP_NAME", "Watermark Studio")}
+        return {
+            "app_name": app.config.get("APP_NAME", "Watermark Studio"),
+            "static_version": app.config.get("STATIC_VERSION", ""),
+        }
 
     @app.errorhandler(RequestEntityTooLarge)
     def _handle_too_large(_):

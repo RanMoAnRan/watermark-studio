@@ -25,7 +25,15 @@ async function submitAjaxForm(cfg) {
     if (errorBox) hide(errorBox);
     if (errorText) setText(errorText, "");
 
-    const submitBtn = form.querySelector(cfg.submitBtn) || form.querySelector("button[type='submit']");
+    if (cfg.onStart) {
+      try {
+        cfg.onStart();
+      } catch (_) {}
+    }
+
+    const submitBtn =
+      (cfg.submitBtn ? (form.querySelector(cfg.submitBtn) || document.querySelector(cfg.submitBtn)) : null) ||
+      form.querySelector("button[type='submit']");
     const originalBtnText = submitBtn ? submitBtn.textContent : null;
     if (submitBtn) {
       submitBtn.disabled = true;

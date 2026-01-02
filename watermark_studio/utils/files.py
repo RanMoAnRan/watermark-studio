@@ -43,3 +43,18 @@ def ensure_image_upload(file_storage) -> UploadedFile:
         raise ValueError("空文件。")
     return UploadedFile(filename=filename, stem=_safe_stem(filename), bytes=payload)
 
+
+def ensure_image_uploads(file_storages) -> list[UploadedFile]:
+    files = list(file_storages or [])
+    if not files:
+        raise ValueError("请选择图片文件。")
+
+    uploaded: list[UploadedFile] = []
+    for fs in files:
+        if fs is None or not getattr(fs, "filename", ""):
+            continue
+        uploaded.append(ensure_image_upload(fs))
+
+    if not uploaded:
+        raise ValueError("请选择图片文件。")
+    return uploaded

@@ -1,13 +1,3 @@
-{% extends "base.html" %}
-{% set title = "PDF 添加水印" %}
-{% set active = "pdf_add" %}
-
-{% block content %}
-  <div class="hero">
-    <h2>PDF 添加水印</h2>
-    <p>支持单点/平铺文字水印：大小、位置、颜色、不透明度、旋转角度可调，并提供在线预览。</p>
-  </div>
-
   <div class="grid">
     <div class="card wide">
       <div class="bd">
@@ -140,29 +130,77 @@
     <div id="pdfAddResult" class="card wide" style="{% if not preview_url %}display:none{% endif %}">
       <div class="hd">
         <h3>预览与下载</h3>
-        <p>在线预览添加水印后的 PDF；确认无误后下载。</p>
+        <p>对比原文件与加水印结果；确认无误后下载。</p>
       </div>
       <div class="bd">
         <div class="row" style="margin-bottom: 12px;">
           <a id="pdfAddDownload" class="btn primary" href="{{ download_url or '#' }}">下载加水印后的 PDF</a>
-          <a class="btn secondary" href="{{ url_for('pdf.add_page') }}">处理另一个文件</a>
+          <a id="pdfAddOriginalDownload" class="btn secondary" href="{{ original_download_url or '#' }}">下载原文件副本</a>
+          <a class="btn secondary" href="{{ url_for('pdf.studio_page', tab='add') }}">处理另一个文件</a>
           <span class="muted">想改参数？直接修改后再次点击“添加并预览”，无需重新选文件。</span>
         </div>
         <div class="preview">
           <div class="bar">
-            <div class="title">PDF 预览</div>
+            <div class="title">原文件 vs 加水印结果</div>
             <div id="pdfAddOriginalName" class="muted">{{ original_name or "" }}</div>
           </div>
           <div class="body">
-            <iframe id="pdfAddIframe" src="{{ preview_url or '' }}"></iframe>
+            <div class="row" style="padding: 12px; gap: 12px; align-items: center;">
+              <div class="row" style="gap: 8px; align-items: center;">
+                <span class="muted">页码</span>
+                <input id="pdfAddSyncPage" type="number" min="1" value="1" style="width: 90px;" />
+                <button id="pdfAddGoPage" class="btn secondary" type="button">跳转</button>
+              </div>
+            </div>
+
+            <div class="cols" style="gap: 12px; padding: 0 12px 12px;">
+              <div class="col-6">
+                <div class="muted" style="margin-bottom: 8px;">原文件</div>
+                <iframe id="pdfAddBeforeIframe" src="{% if original_job_id %}/files/{{ original_job_id }}#page=1{% else %}{% endif %}" style="height: 520px;"></iframe>
+              </div>
+              <div class="col-6">
+                <div class="muted" style="margin-bottom: 8px;">加水印后</div>
+                <iframe id="pdfAddAfterIframe" src="{% if job_id %}/files/{{ job_id }}#page=1{% else %}{% endif %}" style="height: 520px;"></iframe>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='js/forms_ajax.js') }}"></script>
   <script>
+    (function () {
+      const pageInput = document.querySelector("#pdfAddSyncPage");
+      const left = document.querySelector("#pdfAddBeforeIframe");
+      const right = document.querySelector("#pdfAddAfterIframe");
+
+      let ids = {
+        original: {{ (original_job_id or "") | tojson }},
+        watermarked: {{ (job_id or "") | tojson }},
+      };
+
+      function getPage() {
+        return Math.max(1, parseInt((pageInput && pageInput.value) || "1", 10) || 1);
+      }
+
+      function buildIframeSrc(jobId, page) {
+        if (!jobId) return "";
+        return `/files/${encodeURIComponent(jobId)}#page=${page}`;
+      }
+
+      function refreshPreviews() {
+        const p = getPage();
+        if (left) left.src = buildIframeSrc(ids.original, p);
+        if (right) right.src = buildIframeSrc(ids.watermarked, p);
+      }
+
+      window.__setPdfAddIds = (originalJobId, watermarkedJobId) => {
+        ids = { original: originalJobId || "", watermarked: watermarkedJobId || "" };
+        refreshPreviews();
+      };
+    })();
+
     function showPdfAddError(msg) {
       const box = document.querySelector("#pdfAddError");
       const text = document.querySelector("#pdfAddErrorText");
@@ -240,10 +278,37 @@
       submittingText: "处理中…",
       onSuccess: (data) => {
         document.querySelector("#pdfAddResult").style.display = "";
-        document.querySelector("#pdfAddIframe").src = data.preview_url;
+        window.__setPdfAddIds?.(data.original_job_id, data.job_id);
         document.querySelector("#pdfAddDownload").href = data.download_url;
+        document.querySelector("#pdfAddOriginalDownload").href = data.original_download_url;
         document.querySelector("#pdfAddOriginalName").textContent = data.original_name || "";
       },
     });
+
+    (function () {
+      const pageInput = document.querySelector("#pdfAddSyncPage");
+      const goBtn = document.querySelector("#pdfAddGoPage");
+      const left = document.querySelector("#pdfAddBeforeIframe");
+      const right = document.querySelector("#pdfAddAfterIframe");
+
+      function setPage(iframe, page) {
+        if (!iframe) return;
+        const raw = iframe.getAttribute("src") || "";
+        if (!raw) return;
+        const base = raw.split("#")[0];
+        iframe.src = `${base}#page=${page}`;
+      }
+
+      function go() {
+        const p = Math.max(1, parseInt((pageInput && pageInput.value) || "1", 10) || 1);
+        setPage(left, p);
+        setPage(right, p);
+      }
+
+      if (goBtn) goBtn.addEventListener("click", go);
+      if (pageInput) pageInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") go();
+      });
+    })();
   </script>
-{% endblock %}
+

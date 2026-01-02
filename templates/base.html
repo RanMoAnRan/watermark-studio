@@ -12,7 +12,7 @@
         } catch (e) {}
       })();
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
+	    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v=static_version) }}" />
     {% block head %}{% endblock %}
   </head>
   <body>
@@ -43,10 +43,8 @@
 
           <nav class="nav">
             <a href="{{ url_for('main.index') }}" class="{% if active == 'home' %}active{% endif %}">首页</a>
-            <a href="{{ url_for('pdf.remove_page') }}" class="{% if active == 'pdf_remove' %}active{% endif %}">PDF 去水印</a>
-            <a href="{{ url_for('pdf.add_page') }}" class="{% if active == 'pdf_add' %}active{% endif %}">PDF 加水印</a>
-            <a href="{{ url_for('image.add_page') }}" class="{% if active == 'img_add' %}active{% endif %}">图片加水印</a>
-            <a href="{{ url_for('image.remove_page') }}" class="{% if active == 'img_remove' %}active{% endif %}">图片去水印</a>
+            <a href="{{ url_for('pdf.studio_page') }}" class="{% if active == 'pdf' %}active{% endif %}">PDF 水印</a>
+            <a href="{{ url_for('image.studio_page') }}" class="{% if active == 'img' %}active{% endif %}">图片水印</a>
             <a href="{{ url_for('image.compress_page') }}" class="{% if active == 'img_compress' %}active{% endif %}">图片压缩</a>
             <a href="{{ url_for('image.slice_page') }}" class="{% if active == 'img_slice' %}active{% endif %}">图片切分/拼装</a>
             <a href="{{ url_for('webapp.pack_page') }}" class="{% if active == 'webapp_pack' %}active{% endif %}">网站打包 App</a>
@@ -64,7 +62,8 @@
       </footer>
     </div>
 
-    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/particles.js') }}"></script>
-  </body>
-</html>
+	    <script src="{{ url_for('static', filename='js/theme.js', v=static_version) }}"></script>
+	    <script src="{{ url_for('static', filename='js/particles.js', v=static_version) }}"></script>
+	    <script src="{{ url_for('static', filename='js/drag_drop_upload.js', v=static_version) }}"></script>
+	  </body>
+	</html>

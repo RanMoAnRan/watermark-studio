@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% set title = "PDF 水印" %}
+{% set active = "pdf" %}
+
+{% block content %}
+  {% set initial_tab = (tab or "")|lower %}
+  {% if initial_tab != "remove" and initial_tab != "add" %}
+    {% set initial_tab = "remove" %}
+  {% endif %}
+
+  <div class="hero">
+    <h2>PDF 水印</h2>
+    <p>去水印 / 添加水印：处理后可在线预览对比并下载。</p>
+  </div>
+
+  <div class="card wide" style="margin-bottom: 14px;">
+    <div class="bd">
+      <div class="row" style="gap: 10px; flex-wrap: wrap;">
+        <button id="pdfTabRemoveBtn" class="btn {{ 'primary' if initial_tab == 'remove' else 'secondary' }}" type="button">去水印</button>
+        <button id="pdfTabAddBtn" class="btn {{ 'primary' if initial_tab == 'add' else 'secondary' }}" type="button">加水印</button>
+        <span class="muted">切换不会清空当前结果</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/forms_ajax.js', v=static_version) }}"></script>
+
+  <div id="pdfTabRemove" style="{% if initial_tab != 'remove' %}display:none{% endif %}">
+    {% with
+      error=remove_error,
+      stats=remove_stats,
+      text_compare=remove_text_compare,
+      original_name=remove_original_name,
+      enhanced=remove_enhanced,
+      remove_images=remove_remove_images,
+      preview_url=remove_preview_url,
+      download_url=remove_download_url,
+      original_download_url=remove_original_download_url,
+      original_job_id=remove_original_job_id,
+      job_id=remove_job_id
+    %}
+      {% include "pdf/tabs/remove.html" %}
+    {% endwith %}
+  </div>
+
+  <div id="pdfTabAdd" style="{% if initial_tab != 'add' %}display:none{% endif %}">
+    {% with
+      error=add_error,
+      mode=add_mode,
+      text=add_text,
+      options=add_options,
+      img_options=add_img_options,
+      original_name=add_original_name,
+      preview_url=add_preview_url,
+      download_url=add_download_url,
+      original_download_url=add_original_download_url,
+      original_job_id=add_original_job_id,
+      job_id=add_job_id
+    %}
+      {% include "pdf/tabs/add_watermark.html" %}
+    {% endwith %}
+  </div>
+
+  <script>
+    (function () {
+      const studioPath = {{ url_for('pdf.studio_page') | tojson }};
+      const btnRemove = document.getElementById("pdfTabRemoveBtn");
+      const btnAdd = document.getElementById("pdfTabAddBtn");
+      const tabRemove = document.getElementById("pdfTabRemove");
+      const tabAdd = document.getElementById("pdfTabAdd");
+
+      function normalize(which) {
+        return (String(which || "").toLowerCase() === "add") ? "add" : "remove";
+      }
+
+      function setTab(which, opts) {
+        const options = opts || {};
+        const tab = normalize(which);
+        const isRemove = tab === "remove";
+
+        if (tabRemove) tabRemove.style.display = isRemove ? "" : "none";
+        if (tabAdd) tabAdd.style.display = isRemove ? "none" : "";
+
+        if (btnRemove) btnRemove.className = isRemove ? "btn primary" : "btn secondary";
+        if (btnAdd) btnAdd.className = isRemove ? "btn secondary" : "btn primary";
+
+        if (options.updateUrl !== false) {
+          try {
+            const u = new URL(window.location.href);
+            u.pathname = studioPath;
+            u.searchParams.set("tab", tab);
+            history.replaceState(null, "", u.pathname + u.search + u.hash);
+          } catch (_) {}
+        }
+
+        setTimeout(() => window.dispatchEvent(new Event("resize")), 0);
+      }
+
+      window.__setPdfStudioTab = (which) => setTab(which, { updateUrl: true });
+
+      if (btnRemove) btnRemove.addEventListener("click", () => setTab("remove"));
+      if (btnAdd) btnAdd.addEventListener("click", () => setTab("add"));
+
+      window.addEventListener("popstate", () => {
+        try {
+          const u = new URL(window.location.href);
+          setTab(u.searchParams.get("tab"), { updateUrl: false });
+        } catch (_) {
+          setTab("remove", { updateUrl: false });
+        }
+      });
+    })();
+  </script>
+{% endblock %}

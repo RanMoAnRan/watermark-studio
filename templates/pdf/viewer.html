@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PDF 预览</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v={{ static_version }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/pdfjs/pdf_viewer.min.css') }}?v={{ static_version }}" />
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #0b1220;
+      }
+      #pdfScroller {
+        height: 100%;
+        overflow: auto;
+        padding: 12px;
+      }
+      .pdf-page {
+        margin: 0 auto 12px;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+        display: flex;
+        align-items: stretch;
+        justify-content: stretch;
+      }
+      .pdf-page .placeholder {
+        width: 100%;
+        height: 100%;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(90deg, #f3f4f6, #e5e7eb, #f3f4f6);
+        background-size: 200% 100%;
+        animation: shimmer 1.2s infinite linear;
+        color: #6b7280;
+        font-size: 13px;
+      }
+      @keyframes shimmer {
+        0% { background-position: 0% 0%; }
+        100% { background-position: 200% 0%; }
+      }
+      #pdfOverlay {
+        position: absolute;
+        left: 10px;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+        pointer-events: none;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      #pdfOverlay .pill {
+        pointer-events: none;
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        background: rgba(15, 23, 42, 0.75);
+        color: #e5e7eb;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+        backdrop-filter: blur(6px);
+      }
+      #pdfOverlay a {
+        pointer-events: auto;
+        color: #93c5fd;
+        text-decoration: none;
+      }
+      #pdfOverlay a:hover {
+        text-decoration: underline;
+      }
+      #pdfFileInfo {
+        opacity: 0.85;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      }
+      .pdf-page {
+        position: relative;
+      }
+      .pdf-page canvas {
+        display: block;
+      }
+      .pdf-page .textLayer,
+      .pdf-page .annotationLayer {
+        position: absolute;
+        inset: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="pdfOverlay">
+      <div class="pill">
+        <span id="pdfStatus">加载中…</span>
+        <span id="pdfFileInfo"></span>
+        {% if download_name %}
+          <span class="muted" style="margin-left: 8px; opacity: 0.9;">{{ download_name }}</span>
+        {% endif %}
+      </div>
+      <div class="pill">
+        <a id="pdfOpenLink" href="{{ file_url }}" target="_blank" rel="noopener">在新窗口打开</a>
+      </div>
+    </div>
+
+    <div id="pdfScroller" data-pdf-scroller></div>
+
+    <script>
+      window.__WMS_PDF_VIEWER_FILE__ = {{ file_url | tojson }};
+      window.__WMS_PDF_VIEWER_PAGE__ = {{ page | tojson }};
+      window.__WMS_PDF_VIEWER_INTENT__ = {{ (intent or "display") | tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='js/pdf_viewer_embed.js') }}?v={{ static_version }}"></script>
+  </body>
+</html>
