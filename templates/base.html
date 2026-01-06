@@ -12,48 +12,164 @@
         } catch (e) {}
       })();
     </script>
-	    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v=static_version) }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v=static_version) }}" />
     {% block head %}{% endblock %}
   </head>
   <body>
     <canvas id="bgParticles" class="bg_particles" aria-hidden="true"></canvas>
     <div class="container">
-      <div class="theme_switcher">
-        <div class="row">
-          <label for="themeSelect">主题</label>
-          <select id="themeSelect" aria-label="主题">
-            <option value="default">默认</option>
-            <option value="light">浅色</option>
-            <option value="midnight">暗夜</option>
-            <option value="emerald">祖母绿</option>
-            <option value="rose">樱花</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="shell">
-        <aside class="sidebar">
-          <a class="brand" href="{{ url_for('main.index') }}">
-            <div class="logo" aria-hidden="true"></div>
-            <div>
-              <h1>{{ app_name or "Watermark Studio" }}</h1>
-              <div class="sub">PDF / 图片水印：添加、去除、预览、下载</div>
-            </div>
-          </a>
+	      <div class="shell">
+	        <aside class="sidebar">
+	          <a class="brand" href="{{ url_for('main.index') }}" title="{{ app_name or 'Watermark Studio' }}">
+	            <div class="logo" aria-hidden="true" style="--logo-image: url('{{ url_for('static', filename='img/logo.svg', v=static_version) }}');"></div>
+	            <div class="brand_text">
+	              <h1>{{ app_name or "Watermark Studio" }}</h1>
+	              <div class="sub">PDF / 图片水印：添加、去除、预览、下载</div>
+	            </div>
+	          </a>
 
           <nav class="nav">
-            <a href="{{ url_for('main.index') }}" class="{% if active == 'home' %}active{% endif %}">首页</a>
-            <a href="{{ url_for('pdf.studio_page') }}" class="{% if active == 'pdf' %}active{% endif %}">PDF 水印</a>
-            <a href="{{ url_for('image.studio_page') }}" class="{% if active == 'img' %}active{% endif %}">图片水印</a>
-            <a href="{{ url_for('image.compress_page') }}" class="{% if active == 'img_compress' %}active{% endif %}">图片压缩</a>
-            <a href="{{ url_for('image.slice_page') }}" class="{% if active == 'img_slice' %}active{% endif %}">图片切分/拼装</a>
-            <a href="{{ url_for('webapp.pack_page') }}" class="{% if active == 'webapp_pack' %}active{% endif %}">网站打包 App</a>
+            <a href="{{ url_for('main.index') }}" class="{% if active == 'home' %}active{% endif %}" title="首页">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-7H10v7H5a1 1 0 0 1-1-1v-9.5z"/></svg>
+              <span>首页</span>
+            </a>
+            <a href="{{ url_for('pdf.studio_page') }}" class="{% if active == 'pdf' %}active{% endif %}" title="PDF 水印">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm7 1.5V9h4.5L14 4.5zM9 13h6v2H9v-2zm0 4h6v2H9v-2z"/></svg>
+              <span>PDF</span>
+            </a>
+            <a href="{{ url_for('image.studio_page') }}" class="{% if active == 'img' %}active{% endif %}" title="图片水印">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6zm2 0v8.5l3.2-3.2a1 1 0 0 1 1.4 0L14 14.7l1.6-1.6a1 1 0 0 1 1.4 0L18 14.1V6H6zm0 12h12v-1.1l-1.7-1.7-1.6 1.6a1 1 0 0 1-1.4 0L10 13.4 6 17.4V18z"/></svg>
+              <span>图片</span>
+            </a>
+            <a href="{{ url_for('image.annotate_page') }}" class="{% if active == 'img_annotate' %}active{% endif %}" title="UI 标注">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v4h-2V7H5v12h6v2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm9 8 7-7 1.4 1.4-7 7L14 15v-2zm-2 2h2v2h-2v-2zm2 0h2v2h-2v-2z"/></svg>
+              <span>标注</span>
+            </a>
+            <a href="{{ url_for('video.studio_page') }}" class="{% if active == 'video' %}active{% endif %}" title="视频解析">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2.5l4-2.3a1 1 0 0 1 1.5.9v8.8a1 1 0 0 1-1.5.9l-4-2.3V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6zm12 2v8l4 2.3V5.7L16 8z"/></svg>
+              <span>视频</span>
+            </a>
+            <a href="{{ url_for('image.compress_page') }}" class="{% if active == 'img_compress' %}active{% endif %}" title="图片压缩">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7zm2 0v10h12V7H6zm2 2h8v2H8V9zm0 4h5v2H8v-2z"/></svg>
+              <span>压缩</span>
+            </a>
+            <a href="{{ url_for('image.slice_page') }}" class="{% if active == 'img_slice' %}active{% endif %}" title="图片切分/拼装">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7v7H4V5zm9 0h7v7h-7V5zM4 12h7v7H4v-7zm9 4h7v3h-7v-3z"/></svg>
+              <span>切分</span>
+            </a>
+            <a href="{{ url_for('webapp.pack_page') }}" class="{% if active == 'webapp_pack' %}active{% endif %}" title="网站打包 App">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-4l1.5 3H8.5L10 17H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 2v9h12V6H6z"/></svg>
+              <span>打包</span>
+            </a>
           </nav>
         </aside>
 
         <main class="main">
+          <header class="topbar">
+            <div class="topbar_left">
+              <div class="topbar_title">{{ title or (app_name or "Watermark Studio") }}</div>
+              <div class="topbar_subtitle">{% if active == 'home' %}你的工具集合概览{% endif %}</div>
+            </div>
+            <div class="topbar_center">
+              <div class="topbar_search" role="search">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 1 1 4.6 13.4l3.7 3.7-1.4 1.4-3.7-3.7A7.5 7.5 0 0 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"/></svg>
+                <input type="text" placeholder="搜索工具…" aria-label="搜索工具" />
+              </div>
+            </div>
+            <div class="topbar_right">
+              <div class="theme_switcher">
+                <select id="themeSelect" aria-label="主题">
+                  <option value="default">默认</option>
+                  <option value="light">浅色</option>
+                  <option value="midnight">暗夜</option>
+                  <option value="emerald">祖母绿</option>
+                  <option value="rose">樱花</option>
+                </select>
+              </div>
+              <a class="btn primary btn_sm" id="addExternalToolBtn" href="#">+ 添加外链</a>
+            </div>
+          </header>
           {% block content %}{% endblock %}
         </main>
+      </div>
+
+      <div id="toolModalBackdrop" class="modal_backdrop" style="display:none;">
+        <div id="toolModal" class="modal" role="dialog" aria-modal="true" aria-label="添加外链工具" onclick="event.stopPropagation()">
+          <div class="modal_hd">
+            <div id="toolModalTitle" class="modal_title">添加外链工具</div>
+            <a class="btn secondary btn_sm" href="#" data-modal-close>关闭</a>
+          </div>
+          <div class="modal_bd">
+            <form id="toolModalForm">
+              <div class="cols" style="gap: 10px;">
+                <div class="col-12">
+                  <div class="field">
+                    <label>名称</label>
+                    <input type="text" name="name" placeholder="例如：需求文档 / 设计稿 / API 平台" required />
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="field">
+                    <label>外链地址</label>
+                    <input type="text" name="url" placeholder="https://..." required />
+                    <div class="hint">仅支持 http/https 外链。</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="field">
+                    <label>分类</label>
+                    <select name="category">
+                      <option value="dev">开发工具</option>
+                      <option value="design">设计工具</option>
+                      <option value="other">其它</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="field">
+                    <label>图标（可选）</label>
+                    <input type="text" name="icon" placeholder="🔗 / 字母 / 两个字符" />
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="field">
+                    <label>简介（可选）</label>
+                    <textarea name="description" class="annot_json" style="height: 140px; min-height: 110px;" placeholder="一句话说明这个外链做什么"></textarea>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <label style="display:flex; gap:10px; align-items:center;">
+                    <input type="checkbox" name="open_new_tab" checked />
+                    <span class="muted">在新标签页打开</span>
+                  </label>
+                </div>
+              </div>
+              <div class="row" style="justify-content: space-between; margin-top: 10px;">
+                <div id="toolModalStatus" class="muted"></div>
+                <div class="row">
+                  <a class="btn secondary" href="#" data-modal-close>取消</a>
+                  <button class="btn primary" type="submit">保存</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div id="deleteModalBackdrop" class="modal_backdrop" style="display:none;">
+        <div id="deleteModal" class="modal" style="max-width: 400px;" role="dialog" aria-modal="true" aria-label="确认删除" onclick="event.stopPropagation()">
+          <div class="modal_hd">
+            <div class="modal_title">确认删除</div>
+            <a class="btn secondary btn_sm" href="#" data-delete-modal-close>关闭</a>
+          </div>
+          <div class="modal_bd">
+            <p id="deleteModalMessage" style="margin: 0 0 20px; color: var(--text);">确定删除该项目？</p>
+            <div class="row" style="justify-content: flex-end;">
+              <a class="btn secondary" href="#" data-delete-modal-close>取消</a>
+              <button id="deleteModalConfirm" class="btn primary" style="background: var(--danger); border-color: var(--danger);" type="button">删除</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <footer class="footer">
@@ -62,8 +178,26 @@
       </footer>
     </div>
 
-	    <script src="{{ url_for('static', filename='js/theme.js', v=static_version) }}"></script>
-	    <script src="{{ url_for('static', filename='js/particles.js', v=static_version) }}"></script>
-	    <script src="{{ url_for('static', filename='js/drag_drop_upload.js', v=static_version) }}"></script>
-	  </body>
-	</html>
+    <script src="{{ url_for('static', filename='js/theme.js', v=static_version) }}"></script>
+    <script src="{{ url_for('static', filename='js/particles.js', v=static_version) }}"></script>
+    <script src="{{ url_for('static', filename='js/drag_drop_upload.js', v=static_version) }}"></script>
+    <script src="{{ url_for('static', filename='js/external_tools.js', v=static_version) }}"></script>
+    <script>
+      setupExternalToolModal({
+        openBtn: "#addExternalToolBtn",
+        modal: "#toolModal",
+        backdrop: "#toolModalBackdrop",
+        closeBtns: "[data-modal-close]",
+        form: "#toolModalForm",
+        status: "#toolModalStatus",
+        title: "#toolModalTitle",
+        redirectTo: {{ url_for('main.index') | tojson }},
+        endpoints: {
+          add: {{ url_for('main.tools_add') | tojson }},
+          updateBase: {{ url_for('main.tools_update', tool_id='__id__') | tojson }},
+          deleteBase: {{ url_for('main.tools_delete', tool_id='__id__') | tojson }},
+        },
+      });
+    </script>
+  </body>
+</html>

@@ -5,3 +5,5 @@ Pillow>=10.0
 numpy>=1.23
 opencv-python-headless>=4.8
 gunicorn>=21.2
+you-get>=0.4
+yt-dlp>=2024.01.01

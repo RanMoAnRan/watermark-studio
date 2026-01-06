@@ -13,10 +13,14 @@
     w: 0,
     h: 0,
     particles: [],
+    targetCount: 0,
     running: true,
     lastTs: 0,
-    colorA: { r: 124, g: 58, b: 237 }, // --accent default
-    colorB: { r: 34, g: 197, b: 94 }, // --accent2 default
+    fps: 60,
+    fpsEma: 60,
+    slowSinceTs: 0,
+    colorA: { r: 99, g: 102, b: 241 }, // --accent default
+    colorB: { r: 129, g: 140, b: 248 }, // --accent2 default
   };
 
   const pointer = {
@@ -32,8 +36,16 @@
     return Math.max(min, Math.min(max, v));
   }
 
+  function isMobile() {
+    return window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
+  }
+
   function rgba({ r, g, b }, a) {
     return `rgba(${r},${g},${b},${clamp(a, 0, 1)})`;
+  }
+
+  function rgb({ r, g, b }) {
+    return `rgb(${r},${g},${b})`;
   }
 
   function parseColorToRgb(raw) {
@@ -70,6 +82,12 @@
     const b = parseColorToRgb(styles.getPropertyValue("--accent2"));
     if (a) state.colorA = a;
     if (b) state.colorB = b;
+
+    // refresh cached particle colors
+    for (const p of state.particles) {
+      const c = mixColor(p.hueMix);
+      p.rgb = rgb(c);
+    }
   }
 
   function resize() {
@@ -104,16 +122,20 @@
   }
 
   function initParticles() {
-    const isMobile = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
+    const mobile = isMobile();
     const area = state.w * state.h;
-    const base = isMobile ? 32 : 52;
-    const count = clamp(Math.round((area / (1100 * 800)) * base), isMobile ? 22 : 36, isMobile ? 44 : 78);
+    const base = mobile ? 46 : 82; // denser by default
+    const count = clamp(Math.round((area / (1100 * 800)) * base), mobile ? 30 : 54, mobile ? 66 : 132);
+    state.targetCount = count;
 
+    const speedBoost = mobile ? 1.15 : 1.35;
     state.particles = Array.from({ length: count }).map(() => {
-      const size = rand(0.9, isMobile ? 2.1 : 2.6);
-      const speed = rand(10, isMobile ? 22 : 34);
+      const size = rand(0.9, mobile ? 2.0 : 2.5);
+      const speed = rand(14, mobile ? 30 : 44) * speedBoost;
       const angle = rand(-Math.PI, Math.PI);
       const depth = rand(0.2, 1);
+      const hueMix = Math.random();
+      const c = mixColor(hueMix);
       return {
         x: rand(0, state.w),
         y: rand(0, state.h),
@@ -121,7 +143,8 @@
         vy: Math.sin(angle) * speed * (0.45 + depth),
         size: size * (0.7 + depth * 0.6),
         alpha: rand(0.16, 0.38) * (0.55 + depth * 0.55),
-        hueMix: Math.random(),
+        hueMix,
+        rgb: rgb(c),
         wobble: rand(0.35, 1.6),
         phase: rand(0, TAU),
         pulse: rand(0.6, 1.9),
@@ -153,8 +176,8 @@
   }
 
   function drawConnections(ts) {
-    const isMobile = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
-    const maxDist = isMobile ? 110 : 145;
+    const mobile = isMobile();
+    const maxDist = mobile ? 110 : 150;
     const maxDist2 = maxDist * maxDist;
 
     ctx.globalCompositeOperation = "lighter";
@@ -170,18 +193,15 @@
         const d2 = dx * dx + dy * dy;
         if (d2 > maxDist2) continue;
 
-        const d = Math.sqrt(d2);
-        const t = 1 - d / maxDist;
-        const alpha = t * t * 0.22;
+        // avoid sqrt: approximate closeness with squared distance
+        const t = 1 - d2 / maxDist2;
+        const alpha = t * t * 0.20;
         const pulse = 0.72 + 0.28 * Math.sin((ts / 1000) * (a.pulse + b.pulse) * 0.55 + a.phase - b.phase);
         const aa = alpha * pulse * (0.6 + 0.4 * Math.min(a.depth, b.depth));
 
-        const ca = mixColor(a.hueMix);
-        const cb = mixColor(b.hueMix);
-        const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
-        grad.addColorStop(0, rgba(ca, aa));
-        grad.addColorStop(1, rgba(cb, aa));
-        ctx.strokeStyle = grad;
+        // keep it fast: reuse cached RGB and change only globalAlpha
+        ctx.globalAlpha = clamp(aa, 0, 1);
+        ctx.strokeStyle = a.rgb;
 
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
@@ -189,6 +209,7 @@
         ctx.stroke();
       }
     }
+    ctx.globalAlpha = 1;
   }
 
   function drawPointerLinks(ts) {
@@ -199,8 +220,8 @@
     const idleFade = clamp(1 - idle / 2.2, 0, 1);
     if (idleFade <= 0) return;
 
-    const isMobile = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
-    const maxDist = isMobile ? 120 : 170;
+    const mobile = isMobile();
+    const maxDist = mobile ? 130 : 190;
     const maxDist2 = maxDist * maxDist;
 
     ctx.globalCompositeOperation = "lighter";
@@ -213,49 +234,52 @@
       const d2 = dx * dx + dy * dy;
       if (d2 > maxDist2) continue;
 
-      const d = Math.sqrt(d2);
-      const t = 1 - d / maxDist;
+      const t = 1 - d2 / maxDist2;
       const alpha = t * t * 0.28 * idleFade;
-      const c = mixColor(p.hueMix);
-      ctx.strokeStyle = rgba(c, alpha);
+      ctx.globalAlpha = clamp(alpha, 0, 1);
+      ctx.strokeStyle = p.rgb;
       ctx.beginPath();
       ctx.moveTo(p.x, p.y);
       ctx.lineTo(pointer.x, pointer.y);
       ctx.stroke();
     }
+    ctx.globalAlpha = 1;
   }
 
   function drawParticles(ts) {
     ctx.globalCompositeOperation = "lighter";
 
     for (const p of state.particles) {
-      const c = mixColor(p.hueMix);
       const pulse = 0.6 + 0.4 * Math.sin((ts / 1000) * p.pulse + p.phase);
       const a = p.alpha * pulse;
 
-      // glow
-      const glowR = p.size * (4.2 + p.depth * 2.2);
-      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowR);
-      g.addColorStop(0, rgba(c, a * 0.55));
-      g.addColorStop(1, rgba(c, 0));
-      ctx.fillStyle = g;
+      // soft glow (fast: no per-particle gradients)
+      const glowR = p.size * (3.8 + p.depth * 2.0);
+      ctx.fillStyle = p.rgb;
+      ctx.globalAlpha = clamp(a * 0.18, 0, 1);
       ctx.beginPath();
       ctx.arc(p.x, p.y, glowR, 0, TAU);
       ctx.fill();
 
       // core (crisp)
-      ctx.fillStyle = rgba(c, Math.min(1, a * 1.8));
+      ctx.globalAlpha = clamp(a * 0.95, 0, 1);
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, TAU);
       ctx.fill();
     }
+    ctx.globalAlpha = 1;
   }
 
   function draw(ts) {
     if (!state.running) return;
     if (!state.lastTs) state.lastTs = ts;
-    const dt = clamp((ts - state.lastTs) / 1000, 0, 0.033);
+    const dt = clamp((ts - state.lastTs) / 1000, 0, 0.05);
     state.lastTs = ts;
+
+    // FPS estimate (EMA) to adapt on slower devices
+    const instFps = dt > 0 ? 1 / dt : 60;
+    state.fpsEma = state.fpsEma * 0.92 + instFps * 0.08;
+    state.fps = state.fpsEma;
 
     drawBackground(ts);
 
@@ -277,6 +301,45 @@
     drawConnections(ts);
     drawPointerLinks(ts);
     drawParticles(ts);
+
+    // adaptive particle count (keeps motion lively while avoiding "slow" feel)
+    const now = ts;
+    const mobile = isMobile();
+    const minCount = mobile ? 26 : 46;
+    if (state.fps < (mobile ? 42 : 48)) {
+      if (!state.slowSinceTs) state.slowSinceTs = now;
+      if (now - state.slowSinceTs > 900 && state.particles.length > minCount) {
+        state.particles.length = Math.max(minCount, Math.floor(state.particles.length * 0.92));
+        state.slowSinceTs = now;
+      }
+    } else {
+      state.slowSinceTs = 0;
+      if (state.particles.length < state.targetCount && state.fps > (mobile ? 52 : 56)) {
+        const add = Math.min(state.targetCount - state.particles.length, mobile ? 2 : 4);
+        for (let i = 0; i < add; i++) {
+          const size = rand(0.9, mobile ? 2.0 : 2.5);
+          const speed = rand(14, mobile ? 30 : 44) * (mobile ? 1.15 : 1.35);
+          const angle = rand(-Math.PI, Math.PI);
+          const depth = rand(0.2, 1);
+          const hueMix = Math.random();
+          const c = mixColor(hueMix);
+          state.particles.push({
+            x: rand(0, state.w),
+            y: rand(0, state.h),
+            vx: Math.cos(angle) * speed * (0.45 + depth),
+            vy: Math.sin(angle) * speed * (0.45 + depth),
+            size: size * (0.7 + depth * 0.6),
+            alpha: rand(0.16, 0.38) * (0.55 + depth * 0.55),
+            hueMix,
+            rgb: rgb(c),
+            wobble: rand(0.35, 1.6),
+            phase: rand(0, TAU),
+            pulse: rand(0.6, 1.9),
+            depth,
+          });
+        }
+      }
+    }
 
     requestAnimationFrame(draw);
   }

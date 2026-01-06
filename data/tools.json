@@ -1,0 +1,25 @@
+{
+  "schema": "watermark-studio.tools-v1",
+  "tools": [
+    {
+      "id": "ad12e801e5af47fdbc59cb30103e322f",
+      "name": "Stich",
+      "url": "https://stitch.withgoogle.com/",
+      "description": "AI 赋能，加速设计\n轻松设计移动应用和Web应用界面",
+      "category": "design",
+      "icon": "St",
+      "created_at": 1767519664,
+      "open_new_tab": true
+    },
+    {
+      "id": "32f377af947b44c2a27f1fabbe4cc99f",
+      "name": "HiPDF",
+      "url": "https://www.hipdf.cn/all-tools",
+      "description": "一站式在线PDF解决方案\nHiPDF让PDF变得简单高效!所有工具都可以免费使用，只需几秒即可完成PDF的转换、合并、压缩和拆分。",
+      "category": "other",
+      "icon": "H",
+      "created_at": 1767519822,
+      "open_new_tab": true
+    }
+  ]
+}

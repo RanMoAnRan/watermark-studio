@@ -13,15 +13,19 @@
 	    <p>切分：一张图按样式拆分多张；拼装：多张图按样式组合成一张（后端生成预览并可下载）。</p>
 	  </div>
 
+  <div class="card wide" style="margin-bottom: 20px;">
+    <div class="bd">
+      <div class="row" style="gap: 10px;">
+        <button id="tabSlice" class="btn {{ 'primary' if initial_tab == 'slice' else 'secondary' }}" type="button">切分</button>
+        <button id="tabCompose" class="btn {{ 'primary' if initial_tab == 'compose' else 'secondary' }}" type="button">拼装</button>
+        <span class="muted">切换后当前配置会保留</span>
+      </div>
+    </div>
+  </div>
+
   <div class="grid">
     <div class="card wide">
       <div class="bd">
-	        <div class="row" style="margin-bottom: 12px;">
-	          <button id="tabSlice" class="btn {{ 'primary' if initial_tab == 'slice' else 'secondary' }}" type="button">切分</button>
-	          <button id="tabCompose" class="btn {{ 'primary' if initial_tab == 'compose' else 'secondary' }}" type="button">拼装</button>
-	          <span class="muted">切换后当前配置会保留</span>
-	        </div>
-
         <div id="imgSliceError" class="error" style="margin-bottom: 12px; {% if not error %}display:none{% endif %}">
           <span id="imgSliceErrorText">{{ error or "" }}</span>
         </div>

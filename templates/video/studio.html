@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% set title = "视频解析" %}
+{% set active = "video" %}
+
+{% block content %}
+  <div class="hero">
+    <h2>视频解析 / 下载</h2>
+    <p>输入视频链接，使用 you-get 下载；支持合集/播放列表（尽力）、字幕（有则下载），并提供文件列表 + 一键 zip。</p>
+  </div>
+
+  {% if error %}
+    <div class="card wide">
+      <div class="bd">
+        <div class="error">{{ error }}</div>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="grid">
+    <div class="card wide">
+      <div class="bd">
+        <div class="ok" style="margin-bottom: 12px; {% if not env %}display:none{% endif %}">
+          <div class="muted">
+            环境检查：
+            you-get {{ "OK" if env.you_get else "缺失（请安装 you-get）" }} ·
+            yt-dlp {{ "OK" if env.yt_dlp else "缺失（建议安装，YouTube 等站点更稳定）" }} ·
+            ffmpeg {{ "OK" if env.ffmpeg else "缺失（建议安装，部分站点合并可能失败）" }}
+          </div>
+        </div>
+
+        <form id="videoDownloadForm" action="{{ url_for('video.download_submit') }}" method="post" enctype="multipart/form-data">
+          <div class="cols">
+            <div class="col-7">
+              <div class="field">
+                <label>视频链接</label>
+                <input id="videoUrl" type="url" name="url" placeholder="https://..." required />
+                <div class="hint">仅支持 http/https；请确保你有权下载该内容。</div>
+              </div>
+              <div class="field">
+                <label>选项</label>
+                <div class="row" style="flex-wrap: wrap;">
+                  <label style="margin: 0; display: inline-flex; gap: 8px; align-items: center;">
+                    <input type="checkbox" name="playlist" />
+                    下载合集/播放列表（尽力）
+                  </label>
+                  <label style="margin: 0; display: inline-flex; gap: 8px; align-items: center;">
+                    <input type="checkbox" name="subtitles" checked />
+                    下载字幕（有则下载）
+                  </label>
+                  <label style="margin: 0; display: inline-flex; gap: 8px; align-items: center;">
+                    <input type="checkbox" name="cover" />
+                    下载封面（可选）
+                  </label>
+                </div>
+                <div class="hint">YouTube 可能触发“确认你不是机器人”：可尝试启用 Cookies（仅本机自用推荐）。</div>
+              </div>
+
+              <div class="field">
+                <label>Cookies（可选，用于 YouTube “not a bot”）</label>
+                <div class="row" style="flex-wrap: wrap; align-items: center;">
+                  <label style="margin: 0; display: inline-flex; gap: 8px; align-items: center;">
+                    <input type="checkbox" name="cookies_from_browser" />
+                    从浏览器读取 Cookies（本机）
+                  </label>
+                  <select name="cookies_browser" style="min-width: 160px;">
+                    <option value="chrome">Chrome</option>
+                    <option value="edge">Edge</option>
+                    <option value="brave">Brave</option>
+                    <option value="firefox">Firefox</option>
+                    <option value="safari">Safari</option>
+                  </select>
+                </div>
+                <div class="row" style="margin-top: 8px; flex-wrap: wrap; align-items: center;">
+                  <div style="min-width: 220px; flex: 1;">
+                    <input type="text" name="cookies_profile" placeholder="可选：Profile 1 / Default" />
+                    <div class="hint">如果你有多个浏览器配置文件，填这里（留空则默认）。</div>
+                  </div>
+                </div>
+                <div class="row" style="margin-top: 8px; flex-wrap: wrap; align-items: center;">
+                  <div style="min-width: 220px; flex: 1;">
+                    <input type="file" name="cookies_file" accept=".txt" />
+                    <div class="hint">或上传 cookies.txt（Netscape 格式），仅用于本次任务。</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-5">
+              <div id="videoError" class="error" style="margin-bottom: 12px; display:none;">
+                <span id="videoErrorText"></span>
+              </div>
+              <div class="row" style="gap: 10px; flex-wrap: wrap;">
+                <button class="btn primary" type="submit">开始下载</button>
+                <button id="videoPlayBtn" class="btn secondary" type="button">解析并播放（实验）</button>
+                <button id="videoClearBtn" class="btn secondary" type="button">清空</button>
+              </div>
+              <div class="hint">提示：部分站点直链播放会受防盗链/CORS 限制；失败可使用“开始下载”。</div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="videoPlayerCard" class="card wide" style="display:none;">
+      <div class="hd">
+        <h3>在线播放（实验）</h3>
+        <p class="muted">Chrome/Edge 遇到 m3u8 需要 hls.js（页面会自动尝试加载）。</p>
+      </div>
+      <div class="bd">
+        <div class="row" style="gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
+          <span class="pill">类型：<span id="videoPlayKind">-</span></span>
+          <a id="videoPlayOpen" class="btn secondary" href="#" target="_blank" rel="noopener" style="display:none;">打开直链</a>
+          <span id="videoPlayHint" class="muted"></span>
+        </div>
+        <div class="preview">
+          <div class="bar">
+            <div class="title">播放器</div>
+          </div>
+          <div class="body" style="padding: 12px;">
+            <video id="videoPlayer" controls style="width: 100%; max-height: 520px; background:#000;" preload="metadata"></video>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="videoTaskCard" class="card wide" style="{% if not task_id %}display:none{% endif %}">
+      <div class="hd">
+        <h3>任务状态</h3>
+        <p id="videoTaskMeta" class="muted"></p>
+      </div>
+      <div class="bd">
+        <div class="row" style="gap: 12px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+          <span class="pill">状态：<span id="videoStatus">-</span></span>
+          <a id="videoZipBtn" class="btn primary" href="#" style="display:none;">下载全部（zip）</a>
+          <span id="videoStatusHint" class="muted"></span>
+        </div>
+
+        <div class="preview" style="margin-bottom: 12px;">
+          <div class="bar">
+            <div class="title">下载日志</div>
+            <div class="row" style="gap: 8px;">
+              <label style="margin: 0; display: inline-flex; gap: 8px; align-items: center;">
+                <input id="videoAutoScroll" type="checkbox" checked />
+                自动滚动
+              </label>
+            </div>
+          </div>
+          <div class="body">
+            <pre id="videoLog" style="height: 320px; overflow:auto; margin:0; white-space: pre-wrap; word-break: break-word;"></pre>
+          </div>
+        </div>
+
+        <div id="videoFilesWrap" class="preview" style="display:none;">
+          <div class="bar">
+            <div class="title">下载文件</div>
+            <div class="muted">视频 / 字幕（封面可选）</div>
+          </div>
+          <div class="body" style="padding: 12px;">
+            <div id="videoFiles" class="cols" style="gap: 12px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.__WMS_VIDEO_INITIAL_TASK__ = {{ (task_id or "") | tojson }};
+  </script>
+  <script src="{{ url_for('static', filename='js/forms_ajax.js', v=static_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/video_download.js', v=static_version) }}"></script>
+{% endblock %}

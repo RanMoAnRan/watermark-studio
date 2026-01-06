@@ -25,8 +25,7 @@ else
 fi
 
 echo
-echo "Starting server: http://127.0.0.1:5000"
+echo "Starting server (PORT defaults to 5050; will auto-pick next free port if occupied)"
 echo "Press CTRL+C to stop."
 echo
 "$PY" app.py
-

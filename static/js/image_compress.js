@@ -313,12 +313,14 @@ function setupImageCompress(cfg) {
       revokeObjectUrl();
       destroyCropper();
       imageEl.removeAttribute("src");
+      imageEl.style.display = "none";
       setCropInputs(null, null, null, null);
       updateCropUI();
       return;
     }
 
     if (imageEl.src && imageEl.complete && (imageEl.naturalWidth || 0) > 0) {
+      imageEl.style.display = "block";
       initCropper();
       updateCropUI();
       return;
@@ -331,6 +333,7 @@ function setupImageCompress(cfg) {
       centerCrop();
     };
     imageEl.src = objectUrl;
+    imageEl.style.display = "block";
   }
 
   fileInput.addEventListener("change", () => {
@@ -340,6 +343,7 @@ function setupImageCompress(cfg) {
     revokeObjectUrl();
     if (!file) {
       imageEl.removeAttribute("src");
+      imageEl.style.display = "none";
       updateCropUI();
       return;
     }
@@ -350,6 +354,7 @@ function setupImageCompress(cfg) {
       centerCrop();
     };
     imageEl.src = objectUrl;
+    imageEl.style.display = "block";
   });
 
   ratioSelect && ratioSelect.addEventListener("change", () => applyAspectRatio());
@@ -390,6 +395,7 @@ function setupImageCompress(cfg) {
     destroyCropper();
     revokeObjectUrl();
     imageEl.removeAttribute("src");
+    imageEl.style.display = "none";
     setCropInputs(null, null, null, null);
   });
 

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% set title = "UI 标注" %}
+{% set active = "img_annotate" %}
+
+{% block content %}
+  <div class="hero">
+    <h2>UI 标注（布局还原数据）</h2>
+    <p>上传设计图截图，拖拽框选组件并命名；左侧可平移/缩放查看，右侧实时生成完整标注 JSON（可下载或保存为链接）。</p>
+    <p class="muted">说明：背景色/文字色为像素统计的“建议值”，字体/字重/布局等仍需你按设计稿手动补全。</p>
+  </div>
+
+  <div class="card wide">
+    <div class="bd">
+      <div class="row" style="justify-content: space-between; gap: 12px;">
+        <div class="row">
+          <div class="field" style="margin: 0;">
+            <label for="uiFile" style="margin-bottom: 6px;">上传 UI 图片</label>
+            <input id="uiFile" type="file" accept="image/*" />
+            <div class="hint">推荐：PNG；首次加载后可用“保存图片链接”生成可复用地址。</div>
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn secondary" id="uiResetViewBtn" type="button">重置视图</button>
+          <button class="btn secondary" id="uiClearAllBtn" type="button">清空标注</button>
+          <button class="btn primary" id="uiDownloadJsonBtn" type="button">下载 JSON</button>
+          <button class="btn secondary" id="uiSaveJsonBtn" type="button">保存 JSON 链接</button>
+          <button class="btn secondary" id="uiSaveImageBtn" type="button">保存图片链接</button>
+        </div>
+      </div>
+
+      <div class="annot_layout" style="margin-top: 20px;">
+        <div class="annot_left">
+          <div id="uiViewport" class="annot_viewport" tabindex="0" aria-label="UI 标注画布">
+            <div id="uiWorld" class="annot_world">
+              <img id="uiImage" alt="UI Image" style="display: none;" />
+              <svg id="uiOverlay" xmlns="http://www.w3.org/2000/svg" aria-label="标注层"></svg>
+            </div>
+            <div id="uiHud" class="annot_hud" style="display:none;"></div>
+          </div>
+          <div class="hint" style="margin-top: 10px;">
+            操作：拖拽框选组件；点击框选中；<kbd>Delete</kbd> 删除选中；按住 <kbd>Space</kbd> + 拖拽平移；滚轮缩放（以鼠标位置为中心）。
+          </div>
+        </div>
+
+        <div class="annot_right">
+          <div class="card" style="box-shadow:none; background: var(--card2);">
+            <div class="bd" style="padding: 12px;">
+              <div class="row" style="justify-content: space-between;">
+                <div style="font-size: 13px; color: var(--muted);">选中组件</div>
+                <div id="uiSelectedId" class="muted"></div>
+              </div>
+              <div class="cols" style="gap: 10px; margin-top: 10px;">
+                <div class="col-6">
+                  <div class="field">
+                    <label>名称</label>
+                    <input id="uiName" type="text" placeholder="例如：Header / 登录按钮 / 价格文本" />
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="field">
+                    <label>类型</label>
+                    <select id="uiType">
+                      <option value="unknown">unknown</option>
+                      <option value="container">container</option>
+                      <option value="image">image</option>
+                      <option value="text">text</option>
+                      <option value="button">button</option>
+                      <option value="input">input</option>
+                      <option value="icon">icon</option>
+                      <option value="list">list</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="field">
+                    <label>文本（可选）</label>
+                    <input id="uiText" type="text" placeholder="例如：登录 / 立即购买 / ￥199" />
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="field">
+                    <label>背景色（可选）</label>
+                    <input id="uiBgColor" type="color" value="#000000" />
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="field">
+                    <label>文字色（可选）</label>
+                    <input id="uiTextColor" type="color" value="#ffffff" />
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="field">
+                    <label>字号（可选）</label>
+                    <input id="uiFontSize" type="number" min="1" max="200" placeholder="16" />
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="field">
+                    <label>圆角（可选）</label>
+                    <input id="uiRadius" type="number" min="0" max="200" placeholder="8" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="row" style="margin-top: 10px;">
+                <button id="uiCopyJsonBtn" class="btn secondary" type="button">复制完整 JSON</button>
+                <span id="uiStatus" class="muted"></span>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 12px;">
+            <div class="row" style="justify-content: space-between;">
+              <div style="font-size: 13px; color: var(--muted);">组件标注块</div>
+              <div id="uiComponentCount" class="muted"></div>
+            </div>
+            <div id="uiBlocks" class="annot_blocks"></div>
+          </div>
+
+          <div style="margin-top: 12px;">
+            <label>完整 JSON</label>
+            <textarea id="uiJsonText" class="annot_json" readonly spellcheck="false"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/ui_annotator.js', v=static_version) }}"></script>
+  <script>
+    setupUiAnnotator({
+      fileInput: "#uiFile",
+      viewport: "#uiViewport",
+      world: "#uiWorld",
+      image: "#uiImage",
+      overlay: "#uiOverlay",
+      hud: "#uiHud",
+      blocks: "#uiBlocks",
+      jsonText: "#uiJsonText",
+      selectedId: "#uiSelectedId",
+      componentCount: "#uiComponentCount",
+      nameInput: "#uiName",
+      typeSelect: "#uiType",
+      textInput: "#uiText",
+      bgColorInput: "#uiBgColor",
+      textColorInput: "#uiTextColor",
+      fontSizeInput: "#uiFontSize",
+      radiusInput: "#uiRadius",
+      resetViewBtn: "#uiResetViewBtn",
+      clearAllBtn: "#uiClearAllBtn",
+      downloadJsonBtn: "#uiDownloadJsonBtn",
+      copyJsonBtn: "#uiCopyJsonBtn",
+      saveJsonBtn: "#uiSaveJsonBtn",
+      saveImageBtn: "#uiSaveImageBtn",
+      status: "#uiStatus",
+      endpoints: {
+        uploadImage: {{ url_for('image.annotate_upload') | tojson }},
+        saveJson: {{ url_for('image.annotate_save') | tojson }},
+      },
+    });
+  </script>
+{% endblock %}

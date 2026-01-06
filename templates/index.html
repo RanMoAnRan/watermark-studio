@@ -1,88 +1,279 @@
 {% extends "base.html" %}
-{% set title = "首页" %}
+{% set title = "工具管理中心" %}
 {% set active = "home" %}
 
 {% block content %}
-  <div class="hero">
-    <h2>更清晰的文件，更专业的交付</h2>
-    <p>按功能模块划分：PDF 去水印支持在线预览结果；PDF/图片加水印（大小/位置/样式可调）；图片去水印支持选择区域（不选则自动尝试）；图片压缩支持裁剪与按目标大小输出。</p>
-  </div>
+	  <div class="cols">
+	    <div class="col-8">
+	      <div class="card">
+	        <div class="hd">
+          <div class="row" style="justify-content: space-between;">
+            <h3>精选工具</h3>
+            <a class="link muted" href="{{ url_for('main.index') }}">查看全部</a>
+          </div>
+        </div>
+        <div class="bd">
+          <div class="featured_wrap">
+            <div class="featured_preview" aria-hidden="true">
+              <div class="featured_mock" style="--featured-image: url('{{ featured_image_url }}');"></div>
+            </div>
+            <div class="featured_info">
+              <div class="row" style="justify-content: space-between; gap: 10px;">
+                <div class="row" style="gap: 10px;">
+                  <div class="tool_icon" style="--icon-hue: {{ 'featured:pdf' | icon_hue }};">P</div>
+                  <div>
+                    <div class="featured_title">PDF 水印</div>
+                    <div class="row" style="gap: 8px; margin-top: 6px;">
+                      <span class="badge">推荐</span>
+                      <span class="badge badge_ok">稳定</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="bookmark" aria-hidden="true"></div>
+              </div>
 
-  <div class="grid">
-    <div class="card half">
-      <div class="hd">
-        <h3>PDF 去水印</h3>
-        <p>自动尝试清理标记为 Watermark 的内容块与常见注释水印，并提供预览。</p>
-      </div>
-      <div class="bd row">
-        <a class="btn primary" href="{{ url_for('pdf.studio_page', tab='remove') }}">开始处理</a>
-        <span class="muted">适合：注释/标记型水印</span>
+              <p class="muted" style="margin: 12px 0 0; max-width: 70ch;">
+                PDF 去水印与加水印：支持在线预览确认效果后再下载，可处理常见注释水印（/Watermark、/Stamp）与内容块标记。
+              </p>
+
+              <div class="row" style="margin-top: 12px; gap: 8px;">
+                <span class="chip">预览确认</span>
+                <span class="chip">清理注释水印</span>
+                <span class="chip">文字/图片水印</span>
+              </div>
+
+              <div class="row" style="margin-top: 14px;">
+                <a class="btn primary" href="{{ url_for('pdf.studio_page', tab='remove') }}">去水印 →</a>
+                <a class="btn secondary" href="{{ url_for('pdf.studio_page', tab='add') }}">加水印</a>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="card half">
-      <div class="hd">
-        <h3>PDF 添加水印</h3>
-        <p>支持平铺/单点文字水印，调整大小、位置、颜色、不透明度与旋转角度。</p>
-      </div>
-      <div class="bd row">
-        <a class="btn primary" href="{{ url_for('pdf.studio_page', tab='add') }}">添加水印</a>
-        <span class="muted">输出可预览后下载</span>
+    <div class="col-4">
+      <div class="card">
+        <div class="hd">
+          <div class="row" style="justify-content: space-between;">
+            <h3>最近新增</h3>
+            <a class="link muted" href="{{ url_for('main.index') }}">查看全部</a>
+          </div>
+        </div>
+        <div class="bd">
+          <div class="tool_list">
+            {% set ns = namespace(shown=0) %}
+            {% for t in (external_tools_recent or []) %}
+              <a class="tool_item" href="{{ t.url }}" {% if t.open_new_tab %}target="_blank" rel="noopener noreferrer"{% endif %}>
+                {% set icon_class = 'tool_item_icon_blue' %}
+                {% if t.category == 'dev' %}{% set icon_class = 'tool_item_icon_green' %}{% endif %}
+                {% if t.category == 'design' %}{% set icon_class = 'tool_item_icon_blue' %}{% endif %}
+                {% if t.category == 'other' %}{% set icon_class = 'tool_item_icon_purple' %}{% endif %}
+                <div class="tool_item_icon {{ icon_class }}" style="--icon-hue: {{ t.id | icon_hue }};">{{ t.icon }}</div>
+                <div class="tool_item_body">
+                  <div class="tool_item_title">{{ t.name }}</div>
+                  <div class="tool_item_desc">{{ t.description or t.url }}</div>
+                </div>
+                <button
+                  class="tool_edit"
+                  type="button"
+                  title="编辑外链工具"
+                  data-tool-edit="{{ t.id }}"
+                  data-tool-name="{{ t.name }}"
+                  data-tool-url="{{ t.url }}"
+                  data-tool-description="{{ t.description }}"
+                  data-tool-category="{{ t.category }}"
+                  data-tool-icon="{{ t.icon }}"
+                  data-tool-open-new-tab="{{ 'true' if t.open_new_tab else 'false' }}"
+                >✎</button>
+                <button class="tool_del" type="button" title="删除外链工具" data-tool-delete="{{ t.id }}" data-tool-name="{{ t.name }}">×</button>
+                <div class="tool_item_arrow">↗</div>
+              </a>
+              {% set ns.shown = ns.shown + 1 %}
+            {% endfor %}
+
+            {% if ns.shown < 3 %}
+              <a class="tool_item" href="{{ url_for('image.annotate_page') }}">
+                <div class="tool_item_icon tool_item_icon_blue" style="--icon-hue: {{ 'tool:annotate' | icon_hue }};">⧉</div>
+                <div class="tool_item_body">
+                  <div class="tool_item_title">UI 标注</div>
+                  <div class="tool_item_desc">无限画布 + SVG 矢量标注层</div>
+                </div>
+                <div class="tool_item_arrow">→</div>
+              </a>
+              {% set ns.shown = ns.shown + 1 %}
+            {% endif %}
+            {% if ns.shown < 3 %}
+              <a class="tool_item" href="{{ url_for('webapp.pack_page') }}">
+                <div class="tool_item_icon tool_item_icon_purple" style="--icon-hue: {{ 'tool:webapp_pack' | icon_hue }};">⌁</div>
+                <div class="tool_item_body">
+                  <div class="tool_item_title">网站打包 App</div>
+                  <div class="tool_item_desc">输入网址，一键生成 PWA/Android/iOS 壳工程</div>
+                </div>
+                <div class="tool_item_arrow">→</div>
+              </a>
+              {% set ns.shown = ns.shown + 1 %}
+            {% endif %}
+            {% if ns.shown < 3 %}
+              <a class="tool_item" href="{{ url_for('video.studio_page') }}">
+                <div class="tool_item_icon tool_item_icon_green" style="--icon-hue: {{ 'tool:video' | icon_hue }};">▶</div>
+                <div class="tool_item_body">
+                  <div class="tool_item_title">视频解析</div>
+                  <div class="tool_item_desc">解析视频直链/播放列表，支持预览与下载</div>
+                </div>
+                <div class="tool_item_arrow">→</div>
+              </a>
+              {% set ns.shown = ns.shown + 1 %}
+            {% endif %}
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="card half">
-      <div class="hd">
-        <h3>图片添加水印</h3>
-        <p>文字水印：大小、位置、样式（平铺/单点）、旋转与透明度可调。</p>
-      </div>
-      <div class="bd row">
-        <a class="btn primary" href="{{ url_for('image.studio_page', tab='add') }}">开始添加</a>
-        <span class="muted">支持 PNG/JPG/WEBP</span>
+    <div class="col-6">
+      <div class="stack">
+        <div class="card">
+          <div class="hd">
+            <div class="row" style="justify-content: space-between;">
+              <h3>开发工具</h3>
+              <a class="link muted" href="{{ url_for('main.index') }}">查看全部</a>
+            </div>
+          </div>
+          <div class="bd">
+            <div class="tool_tiles tool_tiles_scroll tool_tiles_2x2">
+            <a class="tool_tile" href="{{ url_for('video.studio_page') }}">
+              <div class="tool_tile_icon tool_item_icon_green" style="--icon-hue: {{ 'tool:video' | icon_hue }};">▶</div>
+              <div class="tool_tile_title">视频解析</div>
+              <div class="tool_tile_desc">解析 HLS/MP4 等资源，支持代理播放与下载。</div>
+            </a>
+            <a class="tool_tile" href="{{ url_for('webapp.pack_page') }}">
+              <div class="tool_tile_icon tool_item_icon_purple" style="--icon-hue: {{ 'tool:webapp_pack' | icon_hue }};">⌁</div>
+              <div class="tool_tile_title">网站打包 App</div>
+              <div class="tool_tile_desc">生成 PWA 压缩包与 Capacitor 壳工程模板。</div>
+            </a>
+            <a class="tool_tile" href="{{ url_for('image.compress_page') }}">
+              <div class="tool_tile_icon tool_item_icon_blue" style="--icon-hue: {{ 'tool:image_compress' | icon_hue }};">🗜</div>
+              <div class="tool_tile_title">图片压缩</div>
+              <div class="tool_tile_desc">裁剪比例/输出像素/目标大小控制，预览确认后下载。</div>
+            </a>
+            <a class="tool_tile" href="{{ url_for('image.slice_page') }}">
+              <div class="tool_tile_icon tool_item_icon_blue" style="--icon-hue: {{ 'tool:image_slice' | icon_hue }};">▦</div>
+              <div class="tool_tile_title">图片切分/拼装</div>
+              <div class="tool_tile_desc">一张图切成多宫格，或将多张图按样式拼成一张。</div>
+            </a>
+            {% for t in (external_tools_dev or []) %}
+              <div class="tool_tile">
+                <a href="{{ t.url }}" class="tool_tile_overlay" {% if t.open_new_tab %}target="_blank" rel="noopener noreferrer"{% endif %}></a>
+                <div class="tool_tile_actions tool_tile_actions_top">
+                  <button
+                    class="tool_edit"
+                    type="button"
+                    title="编辑外链工具"
+                    data-tool-edit="{{ t.id }}"
+                    data-tool-name="{{ t.name }}"
+                    data-tool-url="{{ t.url }}"
+                    data-tool-description="{{ t.description }}"
+                    data-tool-category="{{ t.category }}"
+                    data-tool-icon="{{ t.icon }}"
+                    data-tool-open-new-tab="{{ 'true' if t.open_new_tab else 'false' }}"
+                  >✎</button>
+                  <button class="tool_del" type="button" title="删除外链工具" data-tool-delete="{{ t.id }}" data-tool-name="{{ t.name }}">×</button>
+                </div>
+                <div class="tool_tile_icon tool_item_icon_green" style="--icon-hue: {{ t.id | icon_hue }};">{{ t.icon }}</div>
+                <div class="tool_tile_title">{{ t.name }}</div>
+                <div class="tool_tile_desc">{{ t.description or t.url }}</div>
+              </div>
+            {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 14px;">
+          <div class="hd">
+            <div class="row" style="justify-content: space-between;">
+              <h3>其它</h3>
+              <span class="muted">外链工具</span>
+            </div>
+          </div>
+          <div class="bd">
+            <div class="tool_tiles tool_tiles_scroll tool_tiles_2x2">
+              {% if not (external_tools_other or []) %}
+                <div class="muted">暂无外链工具，可点击右上角“+ 添加工具”。</div>
+              {% endif %}
+              {% for t in (external_tools_other or []) %}
+                <div class="tool_tile">
+                  <a href="{{ t.url }}" class="tool_tile_overlay" {% if t.open_new_tab %}target="_blank" rel="noopener noreferrer"{% endif %}></a>
+                  <div class="tool_tile_actions tool_tile_actions_top">
+                    <button
+                      class="tool_edit"
+                      type="button"
+                      title="编辑外链工具"
+                      data-tool-edit="{{ t.id }}"
+                      data-tool-name="{{ t.name }}"
+                      data-tool-url="{{ t.url }}"
+                      data-tool-description="{{ t.description }}"
+                      data-tool-category="{{ t.category }}"
+                      data-tool-icon="{{ t.icon }}"
+                      data-tool-open-new-tab="{{ 'true' if t.open_new_tab else 'false' }}"
+                    >✎</button>
+                    <button class="tool_del" type="button" title="删除外链工具" data-tool-delete="{{ t.id }}" data-tool-name="{{ t.name }}">×</button>
+                  </div>
+                  <div class="tool_tile_icon tool_item_icon_purple" style="--icon-hue: {{ t.id | icon_hue }};">{{ t.icon }}</div>
+                  <div class="tool_tile_title">{{ t.name }}</div>
+                  <div class="tool_tile_desc">{{ t.description or t.url }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="card half">
-      <div class="hd">
-        <h3>图片去水印</h3>
-        <p>可框选水印位置精准去除；不选时自动尝试检测并修复。</p>
-      </div>
-      <div class="bd row">
-        <a class="btn primary" href="{{ url_for('image.studio_page', tab='remove') }}">开始去水印</a>
-        <span class="muted">支持预览后再下载</span>
-      </div>
-    </div>
-
-    <div class="card half">
-      <div class="hd">
-        <h3>图片压缩</h3>
-        <p>支持裁剪比例与输出像素选择，并可设置目标大小（默认不超过）以获得尽量清晰的结果。</p>
-      </div>
-      <div class="bd row">
-        <a class="btn primary" href="{{ url_for('image.compress_page') }}">开始压缩</a>
-        <span class="muted">支持 PNG/JPG/WEBP</span>
-      </div>
-    </div>
-
-    <div class="card half">
-      <div class="hd">
-        <h3>图片切分/拼装</h3>
-        <p>切分：一张图拆分成 2/4/6/9 张；拼装：多张图按样式组合成一张，可拖动调整裁切位置。</p>
-      </div>
-      <div class="bd row">
-        <a class="btn primary" href="{{ url_for('image.slice_page') }}">开始使用</a>
-        <span class="muted">支持切分与拼装</span>
-      </div>
-    </div>
-
-    <div class="card half">
-      <div class="hd">
-        <h3>网站打包 App</h3>
-        <p>输入网址，生成 PWA 包与 Android/iOS（Capacitor）壳工程，用于将网站作为 App 打开。</p>
-      </div>
-      <div class="bd row">
-        <a class="btn primary" href="{{ url_for('webapp.pack_page') }}">开始打包</a>
-        <span class="muted">支持 PWA / Android / iOS</span>
+    <div class="col-6">
+      <div class="card">
+        <div class="hd">
+          <div class="row" style="justify-content: space-between;">
+            <h3>设计工具</h3>
+            <a class="link muted" href="{{ url_for('main.index') }}">查看全部</a>
+          </div>
+        </div>
+          <div class="bd">
+            <div class="tool_tiles tool_tiles_scroll tool_tiles_2x2">
+            <a class="tool_tile" href="{{ url_for('image.annotate_page') }}">
+              <div class="tool_tile_icon tool_item_icon_blue" style="--icon-hue: {{ 'tool:annotate' | icon_hue }};">⧉</div>
+              <div class="tool_tile_title">UI 标注</div>
+              <div class="tool_tile_desc">组件框选 + JSON 规范，辅助前端一比一还原设计图。</div>
+            </a>
+            <a class="tool_tile" href="{{ url_for('image.studio_page') }}">
+              <div class="tool_tile_icon tool_item_icon_blue" style="--icon-hue: {{ 'tool:image_watermark' | icon_hue }};">▦</div>
+              <div class="tool_tile_title">图片水印</div>
+              <div class="tool_tile_desc">图片加水印/去水印，支持预览确认后再下载。</div>
+            </a>
+            {% for t in (external_tools_design or []) %}
+              <div class="tool_tile">
+                <a href="{{ t.url }}" class="tool_tile_overlay" {% if t.open_new_tab %}target="_blank" rel="noopener noreferrer"{% endif %}></a>
+                <div class="tool_tile_actions tool_tile_actions_top">
+                  <button
+                    class="tool_edit"
+                    type="button"
+                    title="编辑外链工具"
+                    data-tool-edit="{{ t.id }}"
+                    data-tool-name="{{ t.name }}"
+                    data-tool-url="{{ t.url }}"
+                    data-tool-description="{{ t.description }}"
+                    data-tool-category="{{ t.category }}"
+                    data-tool-icon="{{ t.icon }}"
+                    data-tool-open-new-tab="{{ 'true' if t.open_new_tab else 'false' }}"
+                  >✎</button>
+                  <button class="tool_del" type="button" title="删除外链工具" data-tool-delete="{{ t.id }}" data-tool-name="{{ t.name }}">×</button>
+                </div>
+                <div class="tool_tile_icon tool_item_icon_blue" style="--icon-hue: {{ t.id | icon_hue }};">{{ t.icon }}</div>
+                <div class="tool_tile_title">{{ t.name }}</div>
+                <div class="tool_tile_desc">{{ t.description or t.url }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
       </div>
     </div>
   </div>

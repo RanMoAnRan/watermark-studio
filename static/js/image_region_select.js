@@ -58,7 +58,7 @@ function setupRegionSelector(cfg) {
       ctx.fillRect(r.x, r.y, r.w, r.h);
       ctx.restore();
     }
-    regions.forEach((r) => drawOne(r, "rgba(124, 58, 237, 0.95)", "rgba(124, 58, 237, 0.14)"));
+    regions.forEach((r) => drawOne(r, "rgba(99, 102, 241, 0.95)", "rgba(99, 102, 241, 0.14)"));
     if (activeRect) drawOne(activeRect, "rgba(34, 197, 94, 0.95)", "rgba(34, 197, 94, 0.14)");
   }
 

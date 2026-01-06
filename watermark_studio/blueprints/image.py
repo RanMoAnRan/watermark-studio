@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import io
 
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
@@ -268,3 +269,62 @@ def compose_submit():
         compose_meta=meta,
         tab="compose",
     )
+
+
+@image_bp.get("/annotate")
+def annotate_page():
+    return render_template("image/annotate.html")
+
+
+@image_bp.post("/annotate/upload")
+def annotate_upload():
+    try:
+        uploaded = ensure_image_upload(request.files.get("file"))
+        mimetype, _suffix = _guess_image_mimetype(uploaded.filename)
+        job_id = save_output_bytes(uploaded.bytes, download_name=uploaded.filename, mimetype=mimetype)
+
+        from PIL import Image
+
+        im = Image.open(io.BytesIO(uploaded.bytes))
+        im.load()
+        width, height = im.size
+
+        return jsonify(
+            ok=True,
+            job_id=job_id,
+            image_url=f"/files/{job_id}",
+            image_download_url=f"/files/{job_id}?download=1",
+            filename=uploaded.filename,
+            width=width,
+            height=height,
+        )
+    except Exception as exc:
+        return jsonify(ok=False, error=f"上传失败：{exc}"), 400
+
+
+@image_bp.post("/annotate/save")
+def annotate_save():
+    try:
+        payload = request.get_json(force=True, silent=False)
+        if not isinstance(payload, dict):
+            raise ValueError("无效的 JSON。")
+
+        name = (request.args.get("name") or "").strip()
+        if not name:
+            img = payload.get("image") if isinstance(payload.get("image"), dict) else {}
+            name = str(img.get("name") or "").strip()
+        if not name:
+            name = "ui_annotations.json"
+        if not name.lower().endswith(".json"):
+            name = name + ".json"
+
+        text = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+        job_id = save_output_bytes(text.encode("utf-8"), download_name=name, mimetype="application/json")
+        return jsonify(
+            ok=True,
+            job_id=job_id,
+            preview_url=f"/files/{job_id}",
+            download_url=f"/files/{job_id}?download=1",
+        )
+    except Exception as exc:
+        return jsonify(ok=False, error=f"保存失败：{exc}"), 400

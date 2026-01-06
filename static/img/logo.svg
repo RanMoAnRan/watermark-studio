@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <!-- Soft glow / depth -->
+  <circle cx="128" cy="128" r="96" fill="white" fill-opacity="0.05"/>
+  
+  <g transform="translate(48 48)">
+    <!-- Abstract Document/Layer Shape -->
+    <path d="M78 10c30 0 55 25 55 55v35c0 30-25 55-55 55S23 130 23 100V65C23 35 48 10 78 10Z" 
+          fill="white" fill-opacity="0.12"/>
+    
+    <!-- Stylized "W" / Watermark Slash -->
+    <path d="M55 115L105 65" stroke="white" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Top Curve -->
+    <path d="M53 78c0-10 8-18 18-18h10" stroke="white" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+    
+    <!-- Bottom Curve -->
+    <path d="M103 98c0 10-8 18-18 18h-10" stroke="white" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+    
+    <!-- Decorative dots representing 'watermark' pixels -->
+    <circle cx="45" cy="55" r="6" fill="white" opacity="0.4"/>
+    <circle cx="115" cy="115" r="6" fill="white" opacity="0.4"/>
+  </g>
+</svg>

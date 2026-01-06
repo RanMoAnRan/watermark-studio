@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -38,6 +39,28 @@ def save_output_bytes(payload: bytes, *, download_name: str, mimetype: str) -> s
     return job_id
 
 
+def save_output_file(src_path: Path, *, download_name: str, mimetype: str) -> str:
+    src = Path(src_path)
+    if not src.exists() or not src.is_file():
+        raise FileNotFoundError(f"Output file not found: {src}")
+
+    job_id = uuid.uuid4().hex
+    out_dir = _outputs_dir()
+    dst_path = out_dir / job_id
+    dst_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Prefer atomic move when possible; fall back to copy if crossing devices.
+    try:
+        src.replace(dst_path)
+    except OSError:
+        shutil.copyfile(src, dst_path)
+        src.unlink(missing_ok=True)
+
+    meta_path = out_dir / f"{job_id}.meta"
+    meta_path.write_text(f"{mimetype}\n{download_name}\n", encoding="utf-8")
+    return job_id
+
+
 def get_output_file(job_id: str) -> OutputFile:
     out_dir = _outputs_dir()
     file_path = (out_dir / job_id).resolve()
@@ -56,4 +79,3 @@ def get_output_file(job_id: str) -> OutputFile:
         raise OutputNotFoundError("Corrupted output metadata.")
 
     return OutputFile(job_id=job_id, path=file_path, mimetype=mimetype, download_name=os.path.basename(download_name))
-

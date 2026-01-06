@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import time
+import importlib.util
+import shutil
+import zlib
 from pathlib import Path
 
 from flask import Flask, render_template
@@ -9,6 +12,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from watermark_studio.blueprints.image import image_bp
 from watermark_studio.blueprints.main import main_bp
 from watermark_studio.blueprints.pdf import pdf_bp
+from watermark_studio.blueprints.video import video_bp
 from watermark_studio.blueprints.webapp import webapp_bp
 
 
@@ -23,11 +27,22 @@ def create_app() -> Flask:
     app.config.setdefault("MAX_CONTENT_LENGTH", 50 * 1024 * 1024)  # 50MB
     app.config.setdefault("APP_NAME", "Watermark Studio")
     app.config.setdefault("STATIC_VERSION", str(int(time.time())))
+    app.config.setdefault("VIDEO_HAVE_FFMPEG", bool(shutil.which("ffmpeg")))
+    app.config.setdefault("VIDEO_HAVE_YOUGET", bool(importlib.util.find_spec("you_get")))
+    app.config.setdefault("VIDEO_HAVE_YTDLP", bool(importlib.util.find_spec("yt_dlp")))
 
     app.register_blueprint(main_bp)
     app.register_blueprint(pdf_bp, url_prefix="/pdf")
     app.register_blueprint(image_bp, url_prefix="/image")
+    app.register_blueprint(video_bp, url_prefix="/video")
     app.register_blueprint(webapp_bp, url_prefix="/webapp")
+
+    @app.template_filter("icon_hue")
+    def _icon_hue(value: object) -> int:
+        s = str(value or "").strip()
+        if not s:
+            return 210
+        return int(zlib.crc32(s.encode("utf-8")) % 360)
 
     @app.context_processor
     def _inject_globals():

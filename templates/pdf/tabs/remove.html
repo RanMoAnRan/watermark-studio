@@ -82,11 +82,11 @@
             <div class="cols" style="gap: 12px; padding: 0 12px 12px;">
               <div class="col-6">
                 <div class="muted" style="margin-bottom: 8px;">原文件</div>
-                <iframe id="pdfRemoveBeforeIframe" src="{% if original_job_id %}/files/{{ original_job_id }}#page=1{% else %}{% endif %}" style="height: 520px;"></iframe>
+                <iframe id="pdfRemoveBeforeIframe" src="{% if original_job_id %}/files/{{ original_job_id }}#page=1{% else %}{% endif %}"></iframe>
               </div>
               <div class="col-6">
                 <div class="muted" style="margin-bottom: 8px;">去水印后</div>
-                <iframe id="pdfRemoveAfterIframe" src="{% if job_id %}/files/{{ job_id }}#page=1{% else %}{% endif %}" style="height: 520px;"></iframe>
+                <iframe id="pdfRemoveAfterIframe" src="{% if job_id %}/files/{{ job_id }}#page=1{% else %}{% endif %}"></iframe>
               </div>
             </div>
           </div>
@@ -182,5 +182,5 @@
         if (e.key === "Enter") go();
       });
     })();
-  </script>
 
+  </script>
