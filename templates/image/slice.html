@@ -218,17 +218,18 @@
         setTimeout(() => window.dispatchEvent(new Event("resize")), 0);
       }
 
-      function draw() {
-        if (!loadedImg) return;
+	      function draw() {
+	        if (!loadedImg) return;
 
-        const dpr = window.devicePixelRatio || 1;
-        const rect = canvas.getBoundingClientRect();
-        const cssW = Math.max(1, rect.width || 1);
-        const cssH = 520;
+	        const dpr = window.devicePixelRatio || 1;
+	        const rect = canvas.getBoundingClientRect();
+	        const cssW = Math.max(1, rect.width || 1);
+	        const vh = Math.max(1, window.innerHeight || 1);
+	        const cssH = Math.max(260, Math.min(520, Math.round(vh * 0.55)));
 
-        canvas.style.height = cssH + "px";
-        canvas.width = Math.round(cssW * dpr);
-        canvas.height = Math.round(cssH * dpr);
+	        canvas.style.height = cssH + "px";
+	        canvas.width = Math.round(cssW * dpr);
+	        canvas.height = Math.round(cssH * dpr);
 
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, cssW, cssH);
