@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 import importlib.util
 import shutil
@@ -16,14 +17,31 @@ from watermark_studio.blueprints.video import video_bp
 from watermark_studio.blueprints.webapp import webapp_bp
 
 
+def _resolve_instance_path(project_root: Path) -> str:
+    raw = (os.environ.get("INSTANCE_PATH") or os.environ.get("FLASK_INSTANCE_PATH") or "").strip()
+    if raw:
+        p = Path(raw)
+        if not p.is_absolute():
+            p = project_root / p
+        return str(p)
+
+    # Vercel serverless filesystem is read-only except /tmp.
+    if (os.environ.get("VERCEL") or "").strip():
+        return str(Path("/tmp") / "watermark_studio_instance")
+
+    return str(project_root / "instance")
+
+
 def create_app() -> Flask:
     project_root = Path(__file__).resolve().parent.parent
+    instance_path = _resolve_instance_path(project_root)
     app = Flask(
         __name__,
         template_folder=str(project_root / "templates"),
         static_folder=str(project_root / "static"),
-        instance_path=str(project_root / "instance"),
+        instance_path=instance_path,
     )
+    Path(instance_path).mkdir(parents=True, exist_ok=True)
     app.config.setdefault("MAX_CONTENT_LENGTH", 50 * 1024 * 1024)  # 50MB
     app.config.setdefault("APP_NAME", "Watermark Studio")
     app.config.setdefault("STATIC_VERSION", str(int(time.time())))
